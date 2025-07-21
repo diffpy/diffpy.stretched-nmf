@@ -134,7 +134,7 @@ class SNMFOptimizer:
         # Initialize weights and determine number of components
         if init_weights is None:
             self.n_components = n_components
-            self.weights = self._rng.beta(a=2.5, b=1.5, size=(self.n_components, self.n_signals))
+            self.weights = self._rng.beta(a=2.0, b=2.0, size=(self.n_components, self.n_signals))
         else:
             self.n_components = init_weights.shape[0]
             self.weights = init_weights
@@ -169,7 +169,7 @@ class SNMFOptimizer:
         self.objective_difference = None
         self._objective_history = [self.objective_function]
 
-        # Set up tracking variables for updateX()
+        # Set up tracking variables for update_components()
         self._prev_components = None
         self.grad_components = np.zeros_like(self.components)  # Gradient of X (zeros for now)
         self._prev_grad_components = np.zeros_like(self.components)  # Previous gradient of X (zeros for now)
@@ -233,17 +233,21 @@ class SNMFOptimizer:
     def optimize_loop(self):
         # Update components first
         self._prev_grad_components = self.grad_components.copy()
+
         self.update_components()
+
         self.num_updates += 1
         self.residuals = self.get_residual_matrix()
         self.objective_function = self.get_objective_function()
         print(f"Objective function after update_components: {self.objective_function:.5e}")
         self._objective_history.append(self.objective_function)
+
         if self.objective_difference is None:
             self.objective_difference = self._objective_history[-1] - self.objective_function
 
         # Now we update weights
         self.update_weights()
+
         self.num_updates += 1
         self.residuals = self.get_residual_matrix()
         self.objective_function = self.get_objective_function()
@@ -257,6 +261,7 @@ class SNMFOptimizer:
         self.objective_function = self.get_objective_function()
         print(f"Objective function after update_stretch: {self.objective_function:.5e}")
         self._objective_history.append(self.objective_function)
+
         self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
 
     def apply_interpolation(self, a, x, return_derivatives=False):
