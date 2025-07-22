@@ -52,10 +52,6 @@ class SNMFOptimizer:
     num_updates : int
         The total number of times that any of (stretch, components, and weights) have had their values changed.
         If not terminated by other means, this value is used to stop when reaching max_iter.
-    objective_function: float
-        The value corresponding to the minimization of the difference between the source_matrix and the
-        products of (stretch, components, and weights). For full details see the sNMF paper. Smaller corresponds to
-        better agreement and is desirable.
     objective_difference : float
         The change in the objective function value since the last update. A negative value
         means that the result improved.
@@ -165,9 +161,9 @@ class SNMFOptimizer:
 
         # Set up residual matrix, objective function, and history
         self.residuals = self.get_residual_matrix()
-        self.objective_function = self.get_objective_function()
+        self._objective_history = []
+        self.update_objective()
         self.objective_difference = None
-        self._objective_history = [self.objective_function]
 
         # Set up tracking variables for update_components()
         self._prev_components = None
@@ -177,8 +173,8 @@ class SNMFOptimizer:
         regularization_term = 0.5 * rho * np.linalg.norm(self._spline_smooth_operator @ self.stretch.T, "fro") ** 2
         sparsity_term = eta * np.sum(np.sqrt(self.components))  # Square root penalty
         print(
-            f"Start, Objective function: {self.objective_function:.5e}"
-            f", Obj - reg/sparse: {self.objective_function - regularization_term - sparsity_term:.5e}"
+            f"Start, Objective function: {self._objective_history[-1]:.5e}"
+            f", Obj - reg/sparse: {self._objective_history[-1] - regularization_term - sparsity_term:.5e}"
         )
 
         # Main optimization loop
@@ -191,15 +187,15 @@ class SNMFOptimizer:
             sparsity_term = eta * np.sum(np.sqrt(self.components))  # Square root penalty
             print(
                 f"Num_updates: {self.num_updates}, "
-                f"Obj fun: {self.objective_function:.5e}, "
-                f"Obj - reg/sparse: {self.objective_function - regularization_term - sparsity_term:.5e}, "
+                f"Obj fun: {self._objective_history[-1]:.5e}, "
+                f"Obj - reg/sparse: {self._objective_history[-1] - regularization_term - sparsity_term:.5e}, "
                 f"Iter: {iter}"
             )
 
             # Convergence check: decide when to terminate for small/no improvement
-            print(self.objective_difference, " < ", self.objective_function * tol)
-            if self.objective_difference < self.objective_function * tol and iter >= 20:
+            if self.objective_difference < self._objective_history[-1] * tol and iter >= 20:
                 break
+            print(self.objective_difference, " < ", self._objective_history[-1] * tol)
 
         # Normalize our results
         weights_row_max = np.max(self.weights, axis=1, keepdims=True)
@@ -214,17 +210,17 @@ class SNMFOptimizer:
         self.grad_components = np.zeros_like(self.components)
         self._prev_grad_components = np.zeros_like(self.components)
         self.residuals = self.get_residual_matrix()
-        self.objective_function = self.get_objective_function()
         self.objective_difference = None
-        self._objective_history = [self.objective_function]
+        self._objective_history = []
+        self.update_objective()
         for norm_iter in range(100):
             self.update_components()
             self.residuals = self.get_residual_matrix()
-            self.objective_function = self.get_objective_function()
-            print(f"Objective function after normX: {self.objective_function:.5e}")
-            self._objective_history.append(self.objective_function)
+            self.update_objective()
+            print(f"Objective function after normalize_components: {self._objective_history[-1]:.5e}")
+            self._objective_history.append(self._objective_history[-1])
             self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
-            if self.objective_difference < self.objective_function * tol and norm_iter >= 20:
+            if self.objective_difference < self._objective_history[-1] * tol and norm_iter >= 20:
                 break
         # end of normalization (and program)
         # note that objective function may not fully recover after normalization, this is okay
@@ -238,29 +234,27 @@ class SNMFOptimizer:
 
         self.num_updates += 1
         self.residuals = self.get_residual_matrix()
-        self.objective_function = self.get_objective_function()
-        print(f"Objective function after update_components: {self.objective_function:.5e}")
-        self._objective_history.append(self.objective_function)
+        self.update_objective()
+        print(f"Objective function after update_components: {self._objective_history[-1]:.5e}")
 
         if self.objective_difference is None:
-            self.objective_difference = self._objective_history[-1] - self.objective_function
+            self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
 
         # Now we update weights
         self.update_weights()
 
         self.num_updates += 1
         self.residuals = self.get_residual_matrix()
-        self.objective_function = self.get_objective_function()
-        print(f"Objective function after update_weights: {self.objective_function:.5e}")
-        self._objective_history.append(self.objective_function)
+        self.update_objective()
+        print(f"Objective function after update_weights: {self._objective_history[-1]:.5e}")
 
         # Now we update stretch
         self.update_stretch()
+
         self.num_updates += 1
         self.residuals = self.get_residual_matrix()
-        self.objective_function = self.get_objective_function()
-        print(f"Objective function after update_stretch: {self.objective_function:.5e}")
-        self._objective_history.append(self.objective_function)
+        self.update_objective()
+        print(f"Objective function after update_stretch: {self._objective_history[-1]:.5e}")
 
         self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
 
@@ -333,7 +327,8 @@ class SNMFOptimizer:
             residuals += weights[k, :] * stretched_components  # Element-wise scaling and sum
         return residuals
 
-    def get_objective_function(self, residuals=None, stretch=None):
+    def update_objective(self, residuals=None, stretch=None):
+        to_return = not (residuals is None and stretch is None)
         if residuals is None:
             residuals = self.residuals
         if stretch is None:
@@ -343,7 +338,11 @@ class SNMFOptimizer:
         sparsity_term = self.eta * np.sum(np.sqrt(self.components))  # Square root penalty
         # Final objective function value
         function = residual_term + regularization_term + sparsity_term
-        return function
+
+        if to_return:
+            return function  # Get value directly for use
+        else:
+            self._objective_history.append(function)  # Store value
 
     def apply_interpolation_matrix(self, components=None, weights=None, stretch=None, return_derivatives=False):
         """
@@ -595,7 +594,7 @@ class SNMFOptimizer:
             )
             self.components = mask * self.components
 
-            objective_improvement = self._objective_history[-1] - self.get_objective_function(
+            objective_improvement = self._objective_history[-1] - self.update_objective(
                 residuals=self.get_residual_matrix()
             )
 
@@ -650,7 +649,7 @@ class SNMFOptimizer:
         stretch_difference = stretch_difference - self.source_matrix
 
         # Compute objective function
-        reg_func = self.get_objective_function(stretch_difference, stretch)
+        reg_func = self.update_objective(stretch_difference, stretch)
 
         # Compute gradient
         tiled_derivative = np.sum(
