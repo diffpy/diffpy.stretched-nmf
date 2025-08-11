@@ -1,3 +1,4 @@
+# import cvxpy as cp
 import numpy as np
 from scipy.optimize import minimize
 from scipy.sparse import coo_matrix, csc_matrix, diags
@@ -39,13 +40,16 @@ class SNMFOptimizer:
     max_iter : int
         The maximum number of times to update each of stretch, components, and weights before stopping
         the optimization.
+    min_iter : int
+        The minimum number of times to update each of stretch, components, and weights before terminating
+        the optimization due to low/no improvement.
     tol : float
         The convergence threshold. This is the minimum fractional improvement in the
         objective function to allow without terminating the optimization. Note that
-        a minimum of 20 updates are run before this parameter is checked.
+        a minimum of min_iter updates are run before this parameter is checked.
     n_components : int
         The number of components to extract from source_matrix. Must be provided when and only when
-        Y0 is not provided.
+        init_weights is not provided.
     random_state : int
         The seed for the initial guesses at the matrices (stretch, components, and weights) created by
         the decomposition.
@@ -98,13 +102,16 @@ class SNMFOptimizer:
         max_iter : int Optional Default = 500
             The maximum number of times to update each of A, X, and Y before stopping
             the optimization.
+        min_iter: int Optional Default = 20
+            The minimum number of times to update each of stretch, components, and weights before terminating
+            the optimization due to low/no improvement.
         tol : float Optional  Default = 5e-7
             The convergence threshold. This is the minimum fractional improvement in the
             objective function to allow without terminating the optimization. Note that
             a minimum of 20 updates are run before this parameter is checked.
         n_components : int  Optional  Default = None
             The number of components to extract from source_matrix. Must be provided when and only when
-            Y0 is not provided.
+            init_weights is not provided.
         random_state : int  Optional  Default = None
             The seed for the initial guesses at the matrices (A, X, and Y) created by
             the decomposition.
@@ -118,7 +125,7 @@ class SNMFOptimizer:
         self.num_updates = 0
         self._rng = np.random.default_rng(random_state)
 
-        # Enforce exclusive specification of n_components or Y0
+        # Enforce exclusive specification of n_components or init_weights
         if (n_components is None and init_weights is None) or (
             n_components is not None and init_weights is not None
         ):
