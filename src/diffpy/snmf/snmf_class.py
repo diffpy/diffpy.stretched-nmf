@@ -66,11 +66,11 @@ class SNMFOptimizer:
         init_weights=None,
         init_components=None,
         init_stretch=None,
-        rho=1e12,
-        eta=610,
-        max_iter=300,
+        rho=0,
+        eta=0,
+        max_iter=500,
         min_iter=20,
-        tol=1e-6,
+        tol=5e-7,
         n_components=None,
         random_state=None,
     ):
@@ -170,7 +170,7 @@ class SNMFOptimizer:
         self.best_objective = self.objective_function
         self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
         self.objective_difference = None
-        self.objective_history = [self.objective_function]
+        self._objective_history = [self.objective_function]
 
         # Set up tracking variables for update_components()
         self._prev_components = None
@@ -225,7 +225,7 @@ class SNMFOptimizer:
         self.residuals = self.get_residual_matrix()
         self.objective_function = self.get_objective_function()
         self.objective_difference = None
-        self.objective_history = [self.objective_function]
+        self._objective_history = [self.objective_function]
         self.outiter = 0
         self.iter = 0
         for outiter in range(self.max_iter):
@@ -235,8 +235,8 @@ class SNMFOptimizer:
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
             print(f"Objective function after normalize_components: {self.objective_function:.5e}")
-            self.objective_history.append(self.objective_function)
-            self.objective_difference = self.objective_history[-2] - self.objective_history[-1]
+            self._objective_history.append(self.objective_function)
+            self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
             if self.objective_difference < self.objective_function * self.tol and outiter >= 7:
                 break
 
@@ -248,8 +248,8 @@ class SNMFOptimizer:
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
             print(f"Objective function after update_components: {self.objective_function:.5e}")
-            self.objective_history.append(self.objective_function)
-            self.objective_difference = self.objective_history[-2] - self.objective_history[-1]
+            self._objective_history.append(self.objective_function)
+            self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
             if self.objective_function < self.best_objective:
                 self.best_objective = self.objective_function
                 self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
@@ -258,22 +258,22 @@ class SNMFOptimizer:
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
             print(f"Objective function after update_weights: {self.objective_function:.5e}")
-            self.objective_history.append(self.objective_function)
-            self.objective_difference = self.objective_history[-2] - self.objective_history[-1]
+            self._objective_history.append(self.objective_function)
+            self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
             if self.objective_function < self.best_objective:
                 self.best_objective = self.objective_function
                 self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
 
-            self.objective_difference = self.objective_history[-2] - self.objective_history[-1]
-            if self.objective_history[-3] - self.objective_function < self.objective_difference * 1e-3:
+            self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
+            if self._objective_history[-3] - self.objective_function < self.objective_difference * 1e-3:
                 break
 
         self.update_stretch()
         self.residuals = self.get_residual_matrix()
         self.objective_function = self.get_objective_function()
         print(f"Objective function after update_stretch: {self.objective_function:.5e}")
-        self.objective_history.append(self.objective_function)
-        self.objective_difference = self.objective_history[-2] - self.objective_history[-1]
+        self._objective_history.append(self.objective_function)
+        self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
         if self.objective_function < self.best_objective:
             self.best_objective = self.objective_function
             self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
@@ -455,7 +455,7 @@ class SNMFOptimizer:
             subject to: 0 ≤ y ≤ 1
 
         Parameters:
-        - t: (N, k) ma
+        - t: (N, k) ndarray
         - source_matrix_col: (N,) column of source_matrix for the corresponding m
 
         Returns:
@@ -541,7 +541,7 @@ class SNMFOptimizer:
             )
             self.components = mask * self.components
 
-            objective_improvement = self.objective_history[-1] - self.get_objective_function(
+            objective_improvement = self._objective_history[-1] - self.get_objective_function(
                 residuals=self.get_residual_matrix()
             )
 
@@ -555,7 +555,7 @@ class SNMFOptimizer:
 
     def update_weights(self):
         """
-        Updates weights using matrix operations, solving a quadratic program via `solve_quadratic_program`.
+        Updates weights using matrix operations, solving a quadratic program to do so.
         """
 
         signal_length = self.signal_length
