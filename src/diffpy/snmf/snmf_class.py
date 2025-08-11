@@ -113,13 +113,15 @@ class SNMFOptimizer:
             The number of components to extract from source_matrix. Must be provided when and only when
             init_weights is not provided.
         random_state : int  Optional  Default = None
-            The seed for the initial guesses at the matrices (A, X, and Y) created by
+            The seed for the initial guesses at the matrices (stretch, components, and weights) created by
             the decomposition.
         """
 
         self.source_matrix = source_matrix
         self.rho = rho
         self.eta = eta
+        self.tol = tol
+        self.max_iter = max_iter
         # Capture matrix dimensions
         self.signal_length, self.n_signals = source_matrix.shape
         self.num_updates = 0
@@ -164,18 +166,19 @@ class SNMFOptimizer:
         self._spline_smooth_operator = 0.25 * diags(
             [1, -2, 1], offsets=[0, 1, 2], shape=(self.n_signals - 2, self.n_signals)
         )
-        self._spline_smooth_penalty = self._spline_smooth_operator.T @ self._spline_smooth_operator
 
         # Set up residual matrix, objective function, and history
         self.residuals = self.get_residual_matrix()
-        self._objective_history = []
-        self.update_objective()
+        self.objective_function = self.get_objective_function()
+        self.best_objective = self.objective_function
+        self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
         self.objective_difference = None
+        self._objective_history = [self.objective_function]
 
         # Set up tracking variables for update_components()
         self._prev_components = None
-        self.grad_components = np.zeros_like(self.components)  # Gradient of X (zeros for now)
-        self._prev_grad_components = np.zeros_like(self.components)  # Previous gradient of X (zeros for now)
+        self.grad_components = np.zeros_like(self.components)
+        self._prev_grad_components = np.zeros_like(self.components)
 
         regularization_term = 0.5 * rho * np.linalg.norm(self._spline_smooth_operator @ self.stretch.T, "fro") ** 2
         sparsity_term = eta * np.sum(np.sqrt(self.components))  # Square root penalty
@@ -264,57 +267,6 @@ class SNMFOptimizer:
         print(f"Objective function after update_stretch: {self._objective_history[-1]:.5e}")
 
         self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
-
-    def apply_interpolation(self, a, x, return_derivatives=False):
-        """
-        Applies an interpolation-based transformation to `x` based on scaling `a`.
-        Also can compute first (`d_intr_x`) and second (`dd_intr_x`) derivatives.
-        """
-        x_len = len(x)
-
-        # Ensure `a` is an array and reshape for broadcasting
-        a = np.atleast_1d(np.asarray(a))  # Ensures a is at least 1D
-
-        # Compute fractional indices, broadcasting over `a`
-        fractional_indices = np.arange(x_len)[:, None] / a  # Shape (N, M)
-
-        integer_indices = np.floor(fractional_indices).astype(int)  # Integer part (still (N, M))
-        valid_mask = integer_indices < (x_len - 1)  # Ensure indices are within bounds
-
-        # Apply valid_mask to keep correct indices
-        idx_int = np.where(
-            valid_mask, integer_indices, x_len - 2
-        )  # Prevent out-of-bounds indexing (previously "I")
-        idx_frac = np.where(valid_mask, fractional_indices, integer_indices)  # Keep aligned (previously "i")
-
-        # Ensure x is a 1D array
-        x = np.asarray(x).ravel()
-
-        # Compute interpolated_x (linear interpolation)
-        interpolated_x = x[idx_int] * (1 - idx_frac + idx_int) + x[np.minimum(idx_int + 1, x_len - 1)] * (
-            idx_frac - idx_int
-        )
-
-        # Fill the tail with the last valid value
-        intr_x_tail = np.full((x_len - len(idx_int), interpolated_x.shape[1]), interpolated_x[-1, :])
-        interpolated_x = np.vstack([interpolated_x, intr_x_tail])
-
-        if return_derivatives:
-            # Compute first derivative (d_intr_x)
-            di = -idx_frac / a
-            d_intr_x = x[idx_int] * (-di) + x[np.minimum(idx_int + 1, x_len - 1)] * di
-            d_intr_x = np.vstack([d_intr_x, np.zeros((x_len - len(idx_int), d_intr_x.shape[1]))])
-
-            # Compute second derivative (dd_intr_x)
-            ddi = -di / a + idx_frac * a**-2
-            dd_intr_x = x[idx_int] * (-ddi) + x[np.minimum(idx_int + 1, x_len - 1)] * ddi
-            dd_intr_x = np.vstack([dd_intr_x, np.zeros((x_len - len(idx_int), dd_intr_x.shape[1]))])
-        else:
-            # Make placeholders
-            d_intr_x = np.empty(interpolated_x.shape)
-            dd_intr_x = np.empty(interpolated_x.shape)
-
-        return interpolated_x, d_intr_x, dd_intr_x
 
     def get_residual_matrix(self, components=None, weights=None, stretch=None):
         # Initialize residual matrix as negative of source_matrix
@@ -722,3 +674,53 @@ def cubic_largest_real_root(p, q):
 
     # Choose correct root depending on sign of delta
     return np.where(delta >= 0, root1, root2)
+
+
+def apply_interpolation(self, a, x, return_derivatives=False):
+    """
+    Applies an interpolation-based transformation to `x` based on scaling `a`.
+    Also can compute first (`d_intr_x`) and second (`dd_intr_x`) derivatives.
+    """
+    x_len = len(x)
+
+    # Ensure `a` is an array and reshape for broadcasting
+    a = np.atleast_1d(np.asarray(a))  # Ensures a is at least 1D
+
+    # Compute fractional indices, broadcasting over `a`
+    fractional_indices = np.arange(x_len)[:, None] / a  # Shape (N, M)
+
+    integer_indices = np.floor(fractional_indices).astype(int)  # Integer part (still (N, M))
+    valid_mask = integer_indices < (x_len - 1)  # Ensure indices are within bounds
+
+    # Apply valid_mask to keep correct indices
+    idx_int = np.where(valid_mask, integer_indices, x_len - 2)  # Prevent out-of-bounds indexing (previously "I")
+    idx_frac = np.where(valid_mask, fractional_indices, integer_indices)  # Keep aligned (previously "i")
+
+    # Ensure x is a 1D array
+    x = np.asarray(x).ravel()
+
+    # Compute interpolated_x (linear interpolation)
+    interpolated_x = x[idx_int] * (1 - idx_frac + idx_int) + x[np.minimum(idx_int + 1, x_len - 1)] * (
+        idx_frac - idx_int
+    )
+
+    # Fill the tail with the last valid value
+    intr_x_tail = np.full((x_len - len(idx_int), interpolated_x.shape[1]), interpolated_x[-1, :])
+    interpolated_x = np.vstack([interpolated_x, intr_x_tail])
+
+    if return_derivatives:
+        # Compute first derivative (d_intr_x)
+        di = -idx_frac / a
+        d_intr_x = x[idx_int] * (-di) + x[np.minimum(idx_int + 1, x_len - 1)] * di
+        d_intr_x = np.vstack([d_intr_x, np.zeros((x_len - len(idx_int), d_intr_x.shape[1]))])
+
+        # Compute second derivative (dd_intr_x)
+        ddi = -di / a + idx_frac * a**-2
+        dd_intr_x = x[idx_int] * (-ddi) + x[np.minimum(idx_int + 1, x_len - 1)] * ddi
+        dd_intr_x = np.vstack([dd_intr_x, np.zeros((x_len - len(idx_int), dd_intr_x.shape[1]))])
+    else:
+        # Make placeholders
+        d_intr_x = np.empty(interpolated_x.shape)
+        dd_intr_x = np.empty(interpolated_x.shape)
+
+    return interpolated_x, d_intr_x, dd_intr_x
