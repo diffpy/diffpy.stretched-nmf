@@ -40,13 +40,15 @@ class SNMFOptimizer:
     max_iter : int
         The maximum number of times to update each of stretch, components, and weights before stopping
         the optimization.
+    min_iter : int
+        The minimum number of times to update each of stretch, components, and weights before terminating
+        the optimization due to low/no improvement.
     tol : float
         The convergence threshold. This is the minimum fractional improvement in the
-        objective function to allow without terminating the optimization. Note that
-        a minimum of 20 updates are run before this parameter is checked.
+        objective function to allow without terminating the optimization.
     n_components : int
         The number of components to extract from source_matrix. Must be provided when and only when
-        Y0 is not provided.
+        init_weights is not provided.
     random_state : int
         The seed for the initial guesses at the matrices (stretch, components, and weights) created by
         the decomposition.
@@ -67,6 +69,7 @@ class SNMFOptimizer:
         rho=1e12,
         eta=610,
         max_iter=300,
+        min_iter=20,
         tol=1e-6,
         n_components=None,
         random_state=None,
@@ -114,6 +117,8 @@ class SNMFOptimizer:
         self.source_matrix = source_matrix
         self.rho = rho
         self.eta = eta
+        self.tol = tol
+        self.max_iter = max_iter
         # Capture matrix dimensions
         self.signal_length, self.n_signals = source_matrix.shape
         self.num_updates = 0
@@ -162,6 +167,8 @@ class SNMFOptimizer:
         # Set up residual matrix, objective function, and history
         self.residuals = self.get_residual_matrix()
         self.objective_function = self.get_objective_function()
+        self.best_objective = self.objective_function
+        self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
         self.objective_difference = None
         self.objective_history = [self.objective_function]
 
@@ -178,7 +185,7 @@ class SNMFOptimizer:
         )
 
         # Main optimization loop
-        for outiter in range(max_iter):
+        for outiter in range(self.max_iter):
             self.outiter = outiter
             self.outer_loop()
             # Print diagnostics
@@ -192,18 +199,26 @@ class SNMFOptimizer:
                 f"Iter: {self.outiter}"
             )
 
-            # Convergence check: Stop if diffun is small and at least 20 iterations have passed
-            print(self.objective_difference, " < ", self.objective_function * tol)
-            if self.objective_difference < self.objective_function * tol and outiter >= 20:
+            # Convergence check: Stop if diffun is small and at least min_iter iterations have passed
+            print("Checking if ", self.objective_difference, " < ", self.objective_function * tol)
+            if self.objective_difference < self.objective_function * tol and outiter >= min_iter:
                 break
 
-        # Normalize our results
+        self.normalize_results()
+
+    def normalize_results(self):
+        # Select our best results for normalization
+        self.components = self.best_matrices[0]
+        self.weights = self.best_matrices[1]
+        self.stretch = self.best_matrices[2]
+
+        # Normalize weights/stretch first
         weights_row_max = np.max(self.weights, axis=1, keepdims=True)
         self.weights = self.weights / weights_row_max
         stretch_row_max = np.max(self.stretch, axis=1, keepdims=True)
         self.stretch = self.stretch / stretch_row_max
 
-        # effectively just re-running class with component updates only vs normalized weights/stretch
+        # effectively just re-running with component updates only vs normalized weights/stretch
         self._prev_components = self.components.copy()  # Previously stored X (like X0 for now)
         self._grad_components = np.zeros_like(self.components)  # Gradient of X (zeros for now)
         self._prev_grad_components = np.zeros_like(self.components)  # Previous gradient of X (zeros for now)
@@ -213,16 +228,16 @@ class SNMFOptimizer:
         self.objective_history = [self.objective_function]
         self.outiter = 0
         self.iter = 0
-        for outiter in range(max_iter):
+        for outiter in range(self.max_iter):
             if iter == 1:
                 self.iter = 1  # So step size can adapt without an inner loop
             self.update_components()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            print(f"Objective function after normX: {self.objective_function:.5e}")
+            print(f"Objective function after normalize_components: {self.objective_function:.5e}")
             self.objective_history.append(self.objective_function)
             self.objective_difference = self.objective_history[-2] - self.objective_history[-1]
-            if self.objective_difference < self.objective_function * tol and outiter >= 20:
+            if self.objective_difference < self.objective_function * self.tol and outiter >= 7:
                 break
 
     def outer_loop(self):
@@ -234,69 +249,34 @@ class SNMFOptimizer:
             self.objective_function = self.get_objective_function()
             print(f"Objective function after update_components: {self.objective_function:.5e}")
             self.objective_history.append(self.objective_function)
-            if self.outiter == 0 and self.iter == 0:
-                self.objective_difference = self.objective_history[-1] - self.objective_function
+            self.objective_difference = self.objective_history[-2] - self.objective_history[-1]
+            if self.objective_function < self.best_objective:
+                self.best_objective = self.objective_function
+                self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
 
-            # Now we update weights
             self.update_weights()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
             print(f"Objective function after update_weights: {self.objective_function:.5e}")
             self.objective_history.append(self.objective_function)
+            self.objective_difference = self.objective_history[-2] - self.objective_history[-1]
+            if self.objective_function < self.best_objective:
+                self.best_objective = self.objective_function
+                self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
+
+            self.objective_difference = self.objective_history[-2] - self.objective_history[-1]
+            if self.objective_history[-3] - self.objective_function < self.objective_difference * 1e-3:
+                break
 
         self.update_stretch()
-
         self.residuals = self.get_residual_matrix()
         self.objective_function = self.get_objective_function()
         print(f"Objective function after update_stretch: {self.objective_function:.5e}")
         self.objective_history.append(self.objective_function)
         self.objective_difference = self.objective_history[-2] - self.objective_history[-1]
-
-    def apply_interpolation(self, a, x):
-        """
-        Applies an interpolation-based transformation to `x` based on scaling `a`.
-        Also computes first (`d_intr_x`) and second (`dd_intr_x`) derivatives.
-        """
-        x_len = len(x)
-
-        # Ensure `a` is an array and reshape for broadcasting
-        a = np.atleast_1d(np.asarray(a))  # Ensures a is at least 1D
-
-        # Compute fractional indices, broadcasting over `a`
-        fractional_indices = np.arange(x_len)[:, None] / a  # Shape (N, M)
-
-        integer_indices = np.floor(fractional_indices).astype(int)  # Integer part (still (N, M))
-        valid_mask = integer_indices < (x_len - 1)  # Ensure indices are within bounds
-
-        # Apply valid_mask to keep correct indices
-        idx_int = np.where(
-            valid_mask, integer_indices, x_len - 2
-        )  # Prevent out-of-bounds indexing (previously "I")
-        idx_frac = np.where(valid_mask, fractional_indices, integer_indices)  # Keep aligned (previously "i")
-
-        # Ensure x is a 1D array
-        x = np.asarray(x).ravel()
-
-        # Compute interpolated_x (linear interpolation)
-        interpolated_x = x[idx_int] * (1 - idx_frac + idx_int) + x[np.minimum(idx_int + 1, x_len - 1)] * (
-            idx_frac - idx_int
-        )
-
-        # Fill the tail with the last valid value
-        intr_x_tail = np.full((x_len - len(idx_int), interpolated_x.shape[1]), interpolated_x[-1, :])
-        interpolated_x = np.vstack([interpolated_x, intr_x_tail])
-
-        # Compute first derivative (d_intr_x)
-        di = -idx_frac / a
-        d_intr_x = x[idx_int] * (-di) + x[np.minimum(idx_int + 1, x_len - 1)] * di
-        d_intr_x = np.vstack([d_intr_x, np.zeros((x_len - len(idx_int), d_intr_x.shape[1]))])
-
-        # Compute second derivative (dd_intr_x)
-        ddi = -di / a + idx_frac * a**-2
-        dd_intr_x = x[idx_int] * (-ddi) + x[np.minimum(idx_int + 1, x_len - 1)] * ddi
-        dd_intr_x = np.vstack([dd_intr_x, np.zeros((x_len - len(idx_int), dd_intr_x.shape[1]))])
-
-        return interpolated_x, d_intr_x, dd_intr_x
+        if self.objective_function < self.best_objective:
+            self.best_objective = self.objective_function
+            self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
 
     def get_residual_matrix(self, components=None, weights=None, stretch=None):
         # Initialize residual matrix as negative of source_matrix
@@ -309,7 +289,7 @@ class SNMFOptimizer:
         residuals = -self.source_matrix.copy()
         # Compute transformed components for all (k, m) pairs
         for k in range(weights.shape[0]):  # K
-            stretched_components, _, _ = self.apply_interpolation(stretch[k, :], components[:, k])  # Only use Ax
+            stretched_components, _, _ = apply_interpolation(stretch[k, :], components[:, k])  # Only use Ax
             residuals += weights[k, :] * stretched_components  # Element-wise scaling and sum
         return residuals
 
@@ -380,11 +360,11 @@ class SNMFOptimizer:
 
         # Extract values
         # Note: this "-1" corrects an off-by-one error that may have originated in an earlier line
-        comp_values_1 = components_bounded.flatten(order="F")[(offset_indices_1 - 1).ravel()].reshape(
-            self.signal_length, self.n_components * self.n_signals
+        comp_values_1 = components_bounded.flatten(order="F")[(offset_indices_1 - 1).ravel(order="F")].reshape(
+            self.signal_length, self.n_components * self.n_signals, order="F"
         )  # order = F uses FORTRAN, column major order
-        comp_values_2 = components_bounded.flatten(order="F")[(offset_indices_2 - 1).ravel()].reshape(
-            self.signal_length, self.n_components * self.n_signals
+        comp_values_2 = components_bounded.flatten(order="F")[(offset_indices_2 - 1).ravel(order="F")].reshape(
+            self.signal_length, self.n_components * self.n_signals, order="F"
         )
 
         # Interpolation
@@ -424,7 +404,7 @@ class SNMFOptimizer:
         )
 
         # Compute indices
-        indices = np.arange(self.signal_length)[:, None] * stretch_tiled  # Shape (N, M*K), replacing `index`
+        indices = np.arange(self.signal_length)[:, None] * stretch_tiled
 
         # Weighting coefficients
         weights_tiled = np.tile(
@@ -582,11 +562,11 @@ class SNMFOptimizer:
         n_signals = self.n_signals
 
         for m in range(n_signals):
-            t = np.zeros((signal_length, self.n_components))  # Initialize t as an (signal_length, K) zero matrix
+            t = np.zeros((signal_length, self.n_components))
 
             # Populate t using apply_interpolation
             for k in range(self.n_components):
-                t[:, k] = self.apply_interpolation(self.stretch[k, m], self.components[:, k])[0].squeeze()
+                t[:, k] = apply_interpolation(self.stretch[k, m], self.components[:, k])[0].squeeze()
 
             # Solve quadratic problem for y using solve_quadratic_program
             y = self.solve_quadratic_program(t=t, m=m)
@@ -595,38 +575,25 @@ class SNMFOptimizer:
             self.weights[:, m] = y
 
     def regularize_function(self, stretch=None):
-        """
-        Computes the regularization function, gradient, and Hessian for optimization.
-        Returns:
-        - fun: Objective function value (scalar)
-        - gra: Gradient (same shape as stretch)
-        """
         if stretch is None:
             stretch = self.stretch
 
-        n_components = self.n_components
-        n_signals = self.n_signals
-        signal_length = self.signal_length
+        K = self.n_components
+        M = self.n_signals
+        N = self.signal_length
 
-        # Compute interpolated matrices
-        stretched_components, d_stretched_comps, dd_stretched_comps = self.apply_interpolation_matrix(
-            stretch=stretch
-        )
+        stretched_components, d_stretch_comps, dd_stretch_comps = self.apply_interpolation_matrix(stretch=stretch)
+        intermediate = stretched_components.flatten(order="F").reshape((N * M, K), order="F")
+        residuals = intermediate.sum(axis=1).reshape((N, M), order="F") - self.source_matrix
 
-        # Compute residual
-        intermediate_diff = stretched_components.flatten(order="F").reshape(
-            (signal_length * n_signals, n_components), order="F"
-        )
-        stretch_difference = intermediate_diff.sum(axis=1).reshape((signal_length, n_signals), order="F")
-        stretch_difference = stretch_difference - self.source_matrix
+        fun = self.get_objective_function(residuals, stretch)
 
-        # Compute objective function
-        fun = self.get_objective_function(stretch_difference, stretch)
+        tiled_res = np.tile(residuals, (1, K))
+        grad_flat = np.sum(d_stretch_comps * tiled_res, axis=0)
+        gra = grad_flat.reshape((M, K), order="F").T
+        gra += self.rho * stretch @ (self._spline_smooth_operator.T @ self._spline_smooth_operator)
 
-        # Compute gradient
-        tiled_derivative = np.sum(d_stretched_comps * np.tile(stretch_difference, (1, n_components)), axis=0)
-        der_reshaped = np.asarray(tiled_derivative).reshape((n_signals, n_components), order="F")
-        gra = der_reshaped.T + self.rho * stretch @ self._spline_smooth_operator.T @ self._spline_smooth_operator
+        # Hessian would go here
 
         return fun, gra
 
@@ -650,11 +617,11 @@ class SNMFOptimizer:
 
         # Solve optimization problem (equivalent to fmincon)
         result = minimize(
-            fun=lambda stretch_vec: objective(stretch_vec)[0],  # Objective function
-            x0=stretch_flat_initial,  # Initial guess
-            method="trust-constr",  # Equivalent to 'trust-region-reflective'
+            fun=lambda stretch_vec: objective(stretch_vec)[0],
+            x0=stretch_flat_initial,
+            method="trust-constr",  # Substitute for 'trust-region-reflective'
             jac=lambda stretch_vec: objective(stretch_vec)[1],  # Gradient
-            bounds=bounds,  # Lower bounds on A
+            bounds=bounds,
         )
 
         # Update A with the optimized values
@@ -692,3 +659,48 @@ def cubic_largest_real_root(p, q):
     y = np.max(real_roots, axis=0) * (delta < 0)  # Keep only real roots when delta < 0
 
     return y
+
+
+def apply_interpolation(a, x):
+    """
+    Applies an interpolation-based transformation to `x` based on scaling `a`.
+    Also computes first (`d_intr_x`) and second (`dd_intr_x`) derivatives.
+    """
+    x_len = len(x)
+
+    # Ensure `a` is an array and reshape for broadcasting
+    a = np.atleast_1d(np.asarray(a))  # Ensures a is at least 1D
+
+    # Compute fractional indices, broadcasting over `a`
+    fractional_indices = np.arange(x_len)[:, None] / a  # Shape (N, M)
+
+    integer_indices = np.floor(fractional_indices).astype(int)  # Integer part (still (N, M))
+    valid_mask = integer_indices < (x_len - 1)  # Ensure indices are within bounds
+
+    # Apply valid_mask to keep correct indices
+    idx_int = np.where(valid_mask, integer_indices, x_len - 2)  # Prevent out-of-bounds indexing (previously "I")
+    idx_frac = np.where(valid_mask, fractional_indices, integer_indices)  # Keep aligned (previously "i")
+
+    # Ensure x is a 1D array
+    x = np.asarray(x).ravel()
+
+    # Compute interpolated_x (linear interpolation)
+    interpolated_x = x[idx_int] * (1 - idx_frac + idx_int) + x[np.minimum(idx_int + 1, x_len - 1)] * (
+        idx_frac - idx_int
+    )
+
+    # Fill the tail with the last valid value
+    intr_x_tail = np.full((x_len - len(idx_int), interpolated_x.shape[1]), interpolated_x[-1, :])
+    interpolated_x = np.vstack([interpolated_x, intr_x_tail])
+
+    # Compute first derivative (d_intr_x)
+    di = -idx_frac / a
+    d_intr_x = x[idx_int] * (-di) + x[np.minimum(idx_int + 1, x_len - 1)] * di
+    d_intr_x = np.vstack([d_intr_x, np.zeros((x_len - len(idx_int), d_intr_x.shape[1]))])
+
+    # Compute second derivative (dd_intr_x)
+    ddi = -di / a + idx_frac * a**-2
+    dd_intr_x = x[idx_int] * (-ddi) + x[np.minimum(idx_int + 1, x_len - 1)] * ddi
+    dd_intr_x = np.vstack([dd_intr_x, np.zeros((x_len - len(idx_int), dd_intr_x.shape[1]))])
+
+    return interpolated_x, d_intr_x, dd_intr_x
