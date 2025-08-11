@@ -1,7 +1,7 @@
-# import cvxpy as cp
+import cvxpy as cp
 import numpy as np
 from scipy.optimize import minimize
-from scipy.sparse import coo_matrix, csc_matrix, diags
+from scipy.sparse import coo_matrix, diags
 
 
 class SNMFOptimizer:
@@ -451,56 +451,48 @@ class SNMFOptimizer:
 
         return stretch_transformed
 
-    def solve_quadratic_program(self, t, m, alg="trust-constr"):
+    def solve_quadratic_program(self, t, m):
         """
-        Solves the quadratic program for updating y in stretched NMF using scipy.optimize:
+        Solves the quadratic program for updating y in stretched NMF:
 
-            min J(y) = 0.5 * y^T Q y + d^T y
+            min J(y) = 0.5 * y^T q y + d^T y
             subject to: 0 ≤ y ≤ 1
 
-        Uses the 'trust-constr' solver with the analytical gradient and Hessian.
-        Alternatively, can use scipy's L-BFGS-B algorithm, which supports bound
-        constraints.
-
         Parameters:
-        - t: (N, K) ndarray
-            Matrix computed from getAfun(A(k, m), X[:, k]).
-        - m: int
-            Index of the current column in source_matrix.
+        - t: (N, k) ndarray
+        - source_matrix_col: (N,) column of source_matrix for the corresponding m
 
         Returns:
-        - y: (k,) ndarray
-            Optimal solution for y, clipped to ensure non-negativity.
+        - y: (k,) optimal solution
         """
+
         source_matrix_col = self.source_matrix[:, m]
-        q = t.T @ t
-        d = -t.T @ source_matrix_col
-        k = q.shape[0]
-        reg_factor = 1e-8 * np.linalg.norm(q, ord="fro")
+
+        # Compute q and d
+        q = t.T @ t  # Gram matrix (k x k)
+        d = -t.T @ source_matrix_col  # Linear term (k,)
+
+        k = q.shape[0]  # Number of variables
+
+        # Regularize q to ensure positive semi-definiteness
+        reg_factor = 1e-8 * np.linalg.norm(q, ord="fro")  # Adaptive regularization, original was fixed
         q += np.eye(k) * reg_factor
 
-        def objective(y):
-            return 0.5 * y @ q @ y + d @ y
+        # Define optimization variable
+        y = cp.Variable(k)
 
-        def grad(y):
-            return q @ y + d
+        # Define quadratic objective
+        objective = cp.Minimize(0.5 * cp.quad_form(y, q) + d.T @ y)
 
-        if alg == "trust-constr":
+        # Define constraints (0 ≤ y ≤ 1)
+        constraints = [y >= 0, y <= 1]
 
-            def hess(y):
-                return csc_matrix(q)  # sparse format for efficiency
+        # Solve using a QP solver
+        prob = cp.Problem(objective, constraints)
+        prob.solve(solver=cp.OSQP, verbose=False)
 
-            bounds = [(0, 1)] * k
-            y0 = np.clip(-np.linalg.solve(q + np.eye(k) * 1e-5, d), 0, 1)
-            result = minimize(
-                objective, y0, method="trust-constr", jac=grad, hess=hess, bounds=bounds, options={"verbose": 0}
-            )
-        elif alg == "L-BFGS-B":
-            bounds = [(0, 1) for _ in range(k)]  # per-variable bounds
-            y0 = np.clip(-np.linalg.solve(q + np.eye(k) * 1e-5, d), 0, 1)  # Initial guess
-            result = minimize(objective, y0, method="L-BFGS-B", jac=grad, bounds=bounds)
-
-        return np.maximum(result.x, 0)
+        # Get the solution
+        return np.maximum(y.value, 0)  # Ensure non-negative values in case of solver tolerance issues
 
     def update_components(self):
         """
