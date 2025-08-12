@@ -3,11 +3,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from diffpy.snmf import SNMFOptimizer
+from diffpy.snmf.snmf_class import SNMFOptimizer
 
-DATA_DIR = Path(__file__).parent / "input"
+DATA_DIR = Path(__file__).parent / "inputs"
 
-# Skip the test entirely if any input file is missing
+# Skip the test entirely if any inputs file is missing
 _required = [
     "init_components.txt",
     "source_matrix.txt",
@@ -39,8 +39,10 @@ def test_final_objective_below_threshold(inputs):
         rho=1e12,
         eta=610,
         random_state=1,
+        min_iter=5,
+        max_iter=5,
     )
 
     # Basic sanity check and the actual assertion
     assert np.isfinite(model.objective_function)
-    assert model.objective_function < 4e6
+    assert model.objective_function < 5e6

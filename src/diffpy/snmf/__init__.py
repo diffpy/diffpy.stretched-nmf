@@ -18,9 +18,6 @@
 # package version
 from diffpy.snmf.version import __version__
 
-# public API
-from .snmf_class import SNMFOptimizer
-
 __all__ = ["__version__", "SNMFOptimizer"]
 
 # silence the pyflakes syntax checker
