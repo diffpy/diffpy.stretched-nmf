@@ -1,0 +1,21 @@
+This test is a whole-program test of the SNMF Optimizer. It runs the optimization on known data with fixed, trusted settings, then asserts
+whether the objective function is below a certain value after exactly a certain number of iterations.
+It is a blunt-force instrument that can tell if a PR has completely broken things, but it will not catch regressions, and its method
+of using objective function only can inadverdently validate a degenerate result. Use with caution.
+
+This test uses data published in:
+Stretched Non-negative Matrix Factorization[J].
+Section 5.4 XRD
+Tab. 7, Fig. 8 & 9
+Gu R, Rakita Y, Lan L, et al.
+Stretched Non-negative Matrix Factorization[J].
+arXiv preprint arXiv:2311.15173, 2023.
+and later republished as:
+Gu, R., Rakita, Y., Lan, L. et al. Stretched non-negative matrix factorization.
+npj Comput Mater 10, 193 (2024). https://doi.org/10.1038/s41524-024-01377-5
+Data description:
+"A stoichiometric mixture of 2:1 YOCl (>98% tetragonal phase) and MgMn2O4 (spinel phase) was uniformly mixed and sealed in a quartz capillary. It was then heated in a gradient furnance, meaning that each location on the quartz tube had a different temperature31. The absolute temperatures at each point along the sample were calibrated from the lattice expansion of a known calibration material, Ni. The data went from a low temperature of 368∘C to a highest temperature of 668∘C with a total of 20 individual temperature points. Using ‘pyFAI’32, the collected 2D diffraction patterns were then cleaned by masking the beam-stop and over-bright/dead pixels, followed by an azimuthal integration to gain 1D PXRD patterns. The 1D PXRD data was then used as inputs to the different NMF algorithms."
+The data was originally sourced from:
+O’Nolan D, Huang G, Kamm GE, et al (2020)
+A thermal-gradient approach to variable-temperature measurements resolved in space.
+Journal of Applied Crystallography 53(3):662–670.

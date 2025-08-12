@@ -5,7 +5,7 @@ import pytest
 
 from diffpy.snmf.snmf_class import SNMFOptimizer
 
-DATA_DIR = Path(__file__).parent / "inputs"
+DATA_DIR = Path(__file__).parent / "inputs/test_snmf_optimizer"
 
 # Skip the test entirely if any inputs file is missing
 _required = [
