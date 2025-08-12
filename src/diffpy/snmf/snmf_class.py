@@ -1,8 +1,9 @@
 import cvxpy as cp
 import numpy as np
-from plotter import SNMFPlotter
 from scipy.optimize import minimize
 from scipy.sparse import coo_matrix, diags
+
+from .plotter import SNMFPlotter
 
 
 class SNMFOptimizer:
