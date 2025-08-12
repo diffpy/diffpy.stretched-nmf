@@ -302,6 +302,51 @@ class SNMFOptimizer:
             )
 
     def get_residual_matrix(self, components=None, weights=None, stretch=None):
+        """
+        Return the residuals (difference) between the source matrix and its reconstruction
+        from the given components, weights, and stretch factors.
+
+        Each component profile is stretched, interpolated to fractional positions,
+        weighted per signal, and summed to form the reconstruction. The residuals
+        are the source matrix minus this reconstruction.
+
+        Parameters
+        ----------
+        components : (signal_len, n_components) array, optional
+        weights    : (n_components, n_signals) array, optional
+        stretch    : (n_components, n_signals) array, optional
+
+        Returns
+        -------
+        residuals : (signal_len, n_signals) array
+        """
+
+        if components is None:
+            components = self.components
+        if weights is None:
+            weights = self.weights
+        if stretch is None:
+            stretch = self.stretch
+
+        residuals = -self.source_matrix.copy()
+        sample_indices = np.arange(components.shape[0])  # (signal_len,)
+
+        for comp in range(components.shape[1]):  # loop over components
+            residuals += (
+                np.interp(
+                    sample_indices[:, None]
+                    / stretch[comp][None, :],  # fractional positions (signal_len, n_signals)
+                    sample_indices,  # (signal_len,)
+                    components[:, comp],  # component profile (signal_len,)
+                    left=components[0, comp],
+                    right=components[-1, comp],
+                )
+                * weights[comp][None, :]  # broadcast (n_signals,) over rows
+            )
+
+        return residuals
+
+    def old_get_residual_matrix(self, components=None, weights=None, stretch=None):
         # Initialize residual matrix as negative of source_matrix
         if components is None:
             components = self.components
@@ -310,10 +355,29 @@ class SNMFOptimizer:
         if stretch is None:
             stretch = self.stretch
         residuals = -self.source_matrix.copy()
-        # Compute transformed components for all (k, m) pairs
-        for k in range(weights.shape[0]):  # K
-            stretched_components, _, _ = apply_interpolation(stretch[k, :], components[:, k])  # Only use Ax
-            residuals += weights[k, :] * stretched_components  # Element-wise scaling and sum
+
+        # Discrete sample positions along the component axis
+        sample_indices = np.arange(components.shape[0])  # (N,)
+
+        for comp in range(components.shape[1]):  # loop over components
+            component_profile = components[:, comp]  # (N,)
+            stretch_factors = stretch[comp, :]  # (M,)
+
+            # Compute scaled/fractional positions along component_profile
+            fractional_positions = sample_indices[:, None] / stretch_factors[None, :]
+
+            # Interpolate component_profile at fractional positions, clamp to ends
+            interpolated_component = np.interp(
+                fractional_positions,
+                sample_indices,
+                component_profile,
+                left=component_profile[0],
+                right=component_profile[-1],
+            )
+
+            # Accumulate weighted contribution into residuals
+            residuals += interpolated_component * weights[comp, None, :]  # (M,) broadcast
+
         return residuals
 
     def get_objective_function(self, residuals=None, stretch=None):
