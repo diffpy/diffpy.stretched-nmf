@@ -12,6 +12,7 @@ my_model = SNMFOptimizer(
     init_weights=init_weights_file,
     init_components=init_components_file,
     init_stretch=init_stretch_file,
+    show_plots=True,
 )
 
 print("Done")

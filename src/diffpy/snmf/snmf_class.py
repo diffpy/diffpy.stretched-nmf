@@ -1,5 +1,6 @@
 import cvxpy as cp
 import numpy as np
+from plotter import SNMFPlotter
 from scipy.optimize import minimize
 from scipy.sparse import coo_matrix, diags
 
@@ -73,6 +74,7 @@ class SNMFOptimizer:
         tol=5e-7,
         n_components=None,
         random_state=None,
+        show_plots=False,
     ):
         """Initialize an instance of SNMF and run the optimization.
 
@@ -112,6 +114,8 @@ class SNMFOptimizer:
         random_state : int  Optional  Default = None
             The seed for the initial guesses at the matrices (A, X, and Y) created by
             the decomposition.
+        show_plots : boolean Optional  Default = False
+            Enables plotting at each step of the decomposition.
         """
 
         self.source_matrix = source_matrix
@@ -123,6 +127,7 @@ class SNMFOptimizer:
         self.signal_length, self.n_signals = source_matrix.shape
         self.num_updates = 0
         self._rng = np.random.default_rng(random_state)
+        self.plotter = SNMFPlotter() if show_plots else None
 
         # Enforce exclusive specification of n_components or init_weights
         if (n_components is None and init_weights is None) or (
@@ -236,6 +241,13 @@ class SNMFOptimizer:
             print(f"Objective function after normalize_components: {self.objective_function:.5e}")
             self._objective_history.append(self.objective_function)
             self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
+            if self.plotter is not None:
+                self.plotter.update(
+                    components=self.components,
+                    weights=self.weights,
+                    stretch=self.stretch,
+                    update_tag="normalize components",
+                )
             if self.objective_difference < self.objective_function * self.tol and outiter >= 7:
                 break
 
@@ -252,6 +264,10 @@ class SNMFOptimizer:
             if self.objective_function < self.best_objective:
                 self.best_objective = self.objective_function
                 self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
+            if self.plotter is not None:
+                self.plotter.update(
+                    components=self.components, weights=self.weights, stretch=self.stretch, update_tag="components"
+                )
 
             self.update_weights()
             self.residuals = self.get_residual_matrix()
@@ -262,6 +278,10 @@ class SNMFOptimizer:
             if self.objective_function < self.best_objective:
                 self.best_objective = self.objective_function
                 self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
+            if self.plotter is not None:
+                self.plotter.update(
+                    components=self.components, weights=self.weights, stretch=self.stretch, update_tag="weights"
+                )
 
             self.objective_difference = self._objective_history[-2] - self._objective_history[-1]
             if self._objective_history[-3] - self.objective_function < self.objective_difference * 1e-3:
@@ -276,6 +296,10 @@ class SNMFOptimizer:
         if self.objective_function < self.best_objective:
             self.best_objective = self.objective_function
             self.best_matrices = [self.components.copy(), self.weights.copy(), self.stretch.copy()]
+        if self.plotter is not None:
+            self.plotter.update(
+                components=self.components, weights=self.weights, stretch=self.stretch, update_tag="stretch"
+            )
 
     def get_residual_matrix(self, components=None, weights=None, stretch=None):
         # Initialize residual matrix as negative of source_matrix
