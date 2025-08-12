@@ -1,4 +1,3 @@
-# helper_plot.py
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -35,14 +34,14 @@ class SNMFPlotter:
 
     def update(self, components, weights, stretch, update_tag=None):
         # Components: transpose before plotting
-        C = np.asarray(components).T
-        self._update_series(self.axes[0], "components", C)
+        c = np.asarray(components).T
+        self._update_series(self.axes[0], "components", c)
 
-        W = np.asarray(weights)
-        self._update_series(self.axes[1], "weights", W)
+        w = np.asarray(weights)
+        self._update_series(self.axes[1], "weights", w)
 
-        S = np.asarray(stretch)
-        self._update_series(self.axes[2], "stretch", S)
+        s = np.asarray(stretch)
+        self._update_series(self.axes[2], "stretch", s)
 
         if update_tag is not None:
             self.fig.suptitle(f"Updated: {update_tag}", fontsize=14)
