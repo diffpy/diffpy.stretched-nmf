@@ -18,6 +18,8 @@
 # package version
 from diffpy.snmf.version import __version__
 
+__all__ = ["__version__", "SNMFOptimizer"]
+
 # silence the pyflakes syntax checker
 assert __version__ or True
 
