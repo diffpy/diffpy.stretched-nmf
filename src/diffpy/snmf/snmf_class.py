@@ -636,19 +636,19 @@ class SNMFOptimizer:
         if stretch is None:
             stretch = self.stretch
 
-        K = self.n_components
-        M = self.n_signals
-        N = self.signal_length
-
         stretched_components, d_stretch_comps, dd_stretch_comps = self.apply_interpolation_matrix(stretch=stretch)
-        intermediate = stretched_components.flatten(order="F").reshape((N * M, K), order="F")
-        residuals = intermediate.sum(axis=1).reshape((N, M), order="F") - self.source_matrix
+        intermediate = stretched_components.flatten(order="F").reshape(
+            (self.signal_length * self.n_signals, self.n_components), order="F"
+        )
+        residuals = (
+            intermediate.sum(axis=1).reshape((self.signal_length, self.n_signals), order="F") - self.source_matrix
+        )
 
         fun = self.get_objective_function(residuals, stretch)
 
-        tiled_res = np.tile(residuals, (1, K))
+        tiled_res = np.tile(residuals, (1, self.n_components))
         grad_flat = np.sum(d_stretch_comps * tiled_res, axis=0)
-        gra = grad_flat.reshape((M, K), order="F").T
+        gra = grad_flat.reshape((self.n_signals, self.n_components), order="F").T
         gra += self.rho * stretch @ (self._spline_smooth_operator.T @ self._spline_smooth_operator)
 
         # Hessian would go here
@@ -657,10 +657,10 @@ class SNMFOptimizer:
 
     def update_stretch(self):
         """
-        Updates matrix A using constrained optimization (equivalent to fmincon in MATLAB).
+        Updates stretching matrix using constrained optimization (equivalent to fmincon in MATLAB).
         """
 
-        # Flatten A for compatibility with the optimizer (since SciPy expects 1D input)
+        # Flatten stretch for compatibility with the optimizer (since SciPy expects 1D input)
         stretch_flat_initial = self.stretch.flatten()
 
         # Define the optimization function
@@ -682,7 +682,7 @@ class SNMFOptimizer:
             bounds=bounds,
         )
 
-        # Update A with the optimized values
+        # Update stretch with the optimized values
         self.stretch = result.x.reshape(self.stretch.shape)
 
 
