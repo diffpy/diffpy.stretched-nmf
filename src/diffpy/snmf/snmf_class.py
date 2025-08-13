@@ -346,40 +346,6 @@ class SNMFOptimizer:
 
         return residuals
 
-    def old_get_residual_matrix(self, components=None, weights=None, stretch=None):
-        # Initialize residual matrix as negative of source_matrix
-        if components is None:
-            components = self.components
-        if weights is None:
-            weights = self.weights
-        if stretch is None:
-            stretch = self.stretch
-        residuals = -self.source_matrix.copy()
-
-        # Discrete sample positions along the component axis
-        sample_indices = np.arange(components.shape[0])  # (N,)
-
-        for comp in range(components.shape[1]):  # loop over components
-            component_profile = components[:, comp]  # (N,)
-            stretch_factors = stretch[comp, :]  # (M,)
-
-            # Compute scaled/fractional positions along component_profile
-            fractional_positions = sample_indices[:, None] / stretch_factors[None, :]
-
-            # Interpolate component_profile at fractional positions, clamp to ends
-            interpolated_component = np.interp(
-                fractional_positions,
-                sample_indices,
-                component_profile,
-                left=component_profile[0],
-                right=component_profile[-1],
-            )
-
-            # Accumulate weighted contribution into residuals
-            residuals += interpolated_component * weights[comp, None, :]  # (M,) broadcast
-
-        return residuals
-
     def get_objective_function(self, residuals=None, stretch=None):
         if residuals is None:
             residuals = self.residuals
@@ -751,7 +717,6 @@ def cubic_largest_real_root(p, q):
 def apply_interpolation(a, x):
     """
     Applies an interpolation-based transformation to `x` based on scaling `a`.
-    Also computes first (`d_intr_x`) and second (`dd_intr_x`) derivatives.
     """
     x_len = len(x)
 
@@ -780,16 +745,4 @@ def apply_interpolation(a, x):
     intr_x_tail = np.full((x_len - len(idx_int), interpolated_x.shape[1]), interpolated_x[-1, :])
     interpolated_x = np.vstack([interpolated_x, intr_x_tail])
 
-    """
-    # Compute first derivative (d_intr_x)
-    di = -idx_frac / a
-    d_intr_x = x[idx_int] * (-di) + x[np.minimum(idx_int + 1, x_len - 1)] * di
-    d_intr_x = np.vstack([d_intr_x, np.zeros((x_len - len(idx_int), d_intr_x.shape[1]))])
-
-    # Compute second derivative (dd_intr_x)
-    ddi = -di / a + idx_frac * a**-2
-    dd_intr_x = x[idx_int] * (-ddi) + x[np.minimum(idx_int + 1, x_len - 1)] * ddi
-    dd_intr_x = np.vstack([dd_intr_x, np.zeros((x_len - len(idx_int), dd_intr_x.shape[1]))])
-    """
-
-    return interpolated_x  # , d_intr_x, dd_intr_x
+    return interpolated_x
