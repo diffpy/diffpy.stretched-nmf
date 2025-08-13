@@ -608,24 +608,29 @@ class SNMFOptimizer:
 
     def update_weights(self):
         """
-        Updates weights using matrix operations, solving a quadratic program to do so.
+        Updates weights by building the stretched component matrix `stretched_comps` with np.interp
+        and solving a quadratic program for each signal.
         """
 
-        signal_length = self.signal_length
-        n_signals = self.n_signals
+        sample_indices = np.arange(self.signal_length)
+        for signal in range(self.n_signals):
+            # Stretch factors for this signal across components:
+            this_stretch = self.stretch[:, signal]
+            # Build stretched_comps[:, k] by interpolating component at frac. pos. index / this_stretch[comp]
+            stretched_comps = np.empty((self.signal_length, self.n_components), dtype=self.components.dtype)
+            for comp in range(self.n_components):
+                pos = sample_indices / this_stretch[comp]
+                stretched_comps[:, comp] = np.interp(
+                    pos,
+                    sample_indices,
+                    self.components[:, comp],
+                    left=self.components[0, comp],
+                    right=self.components[-1, comp],
+                )
 
-        for m in range(n_signals):
-            t = np.zeros((signal_length, self.n_components))
-
-            # Populate t using apply_interpolation
-            for k in range(self.n_components):
-                t[:, k] = apply_interpolation(self.stretch[k, m], self.components[:, k]).squeeze()
-
-            # Solve quadratic problem for y
-            y = self.solve_quadratic_program(t=t, m=m)
-
-            # Update Y
-            self.weights[:, m] = y
+            # Solve quadratic problem for a given signal and update its weight
+            new_weight = self.solve_quadratic_program(t=stretched_comps, m=signal)
+            self.weights[:, signal] = new_weight
 
     def regularize_function(self, stretch=None):
         if stretch is None:
@@ -712,37 +717,3 @@ def cubic_largest_real_root(p, q):
     y = np.max(real_roots, axis=0) * (delta < 0)  # Keep only real roots when delta < 0
 
     return y
-
-
-def apply_interpolation(a, x):
-    """
-    Applies an interpolation-based transformation to `x` based on scaling `a`.
-    """
-    x_len = len(x)
-
-    # Ensure `a` is an array and reshape for broadcasting
-    a = np.atleast_1d(np.asarray(a))  # Ensures a is at least 1D
-
-    # Compute fractional indices, broadcasting over `a`
-    fractional_indices = np.arange(x_len)[:, None] / a  # Shape (N, M)
-
-    integer_indices = np.floor(fractional_indices).astype(int)  # Integer part (still (N, M))
-    valid_mask = integer_indices < (x_len - 1)  # Ensure indices are within bounds
-
-    # Apply valid_mask to keep correct indices
-    idx_int = np.where(valid_mask, integer_indices, x_len - 2)  # Prevent out-of-bounds indexing (previously "I")
-    idx_frac = np.where(valid_mask, fractional_indices, integer_indices)  # Keep aligned (previously "i")
-
-    # Ensure x is a 1D array
-    x = np.asarray(x).ravel()
-
-    # Compute interpolated_x (linear interpolation)
-    interpolated_x = x[idx_int] * (1 - idx_frac + idx_int) + x[np.minimum(idx_int + 1, x_len - 1)] * (
-        idx_frac - idx_int
-    )
-
-    # Fill the tail with the last valid value
-    intr_x_tail = np.full((x_len - len(idx_int), interpolated_x.shape[1]), interpolated_x[-1, :])
-    interpolated_x = np.vstack([interpolated_x, intr_x_tail])
-
-    return interpolated_x
