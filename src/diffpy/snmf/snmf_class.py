@@ -653,7 +653,7 @@ class SNMFOptimizer:
 
             # Populate t using apply_interpolation
             for k in range(self.n_components):
-                t[:, k] = apply_interpolation(self.stretch[k, m], self.components[:, k])[0].squeeze()
+                t[:, k] = apply_interpolation(self.stretch[k, m], self.components[:, k]).squeeze()
 
             # Solve quadratic problem for y
             y = self.solve_quadratic_program(t=t, m=m)
@@ -780,6 +780,7 @@ def apply_interpolation(a, x):
     intr_x_tail = np.full((x_len - len(idx_int), interpolated_x.shape[1]), interpolated_x[-1, :])
     interpolated_x = np.vstack([interpolated_x, intr_x_tail])
 
+    """
     # Compute first derivative (d_intr_x)
     di = -idx_frac / a
     d_intr_x = x[idx_int] * (-di) + x[np.minimum(idx_int + 1, x_len - 1)] * di
@@ -789,5 +790,6 @@ def apply_interpolation(a, x):
     ddi = -di / a + idx_frac * a**-2
     dd_intr_x = x[idx_int] * (-ddi) + x[np.minimum(idx_int + 1, x_len - 1)] * ddi
     dd_intr_x = np.vstack([dd_intr_x, np.zeros((x_len - len(idx_int), dd_intr_x.shape[1]))])
+    """
 
-    return interpolated_x, d_intr_x, dd_intr_x
+    return interpolated_x  # , d_intr_x, dd_intr_x
