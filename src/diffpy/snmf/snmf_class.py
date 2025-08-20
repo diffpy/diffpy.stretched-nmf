@@ -304,12 +304,7 @@ class SNMFOptimizer:
 
     def get_residual_matrix(self, components=None, weights=None, stretch=None):
         """
-        Return the residuals (difference) between the source matrix and its reconstruction
-        from the given components, weights, and stretch factors.
-
-        Each component profile is stretched, interpolated to fractional positions,
-        weighted per signal, and summed to form the reconstruction. The residuals
-        are the source matrix minus this reconstruction.
+        Return the residuals (difference) between the source matrix and its reconstruction.
 
         Parameters
         ----------
@@ -329,21 +324,8 @@ class SNMFOptimizer:
         if stretch is None:
             stretch = self.stretch
 
-        residuals = -self.source_matrix.copy()
-        sample_indices = np.arange(components.shape[0])  # (signal_len,)
-
-        for comp in range(components.shape[1]):  # loop over components
-            residuals += (
-                np.interp(
-                    sample_indices[:, None]
-                    / stretch[comp][None, :],  # fractional positions (signal_len, n_signals)
-                    sample_indices,  # (signal_len,)
-                    components[:, comp],  # component profile (signal_len,)
-                    left=components[0, comp],
-                    right=components[-1, comp],
-                )
-                * weights[comp][None, :]  # broadcast (n_signals,) over rows
-            )
+        reconstructed_matrix = reconstruct_matrix(components, weights, stretch)
+        residuals = reconstructed_matrix - self.source_matrix
 
         return residuals
 
@@ -718,3 +700,44 @@ def cubic_largest_real_root(p, q):
     y = np.max(real_roots, axis=0) * (delta < 0)  # Keep only real roots when delta < 0
 
     return y
+
+
+def reconstruct_matrix(components=None, weights=None, stretch=None):
+    """
+    Construct the approximation of the source matrix corresponding to the
+    given components, weights, and stretch factors.
+
+    Each component profile is stretched, interpolated to fractional positions,
+    weighted per signal, and summed to form the reconstruction.
+
+    Parameters
+    ----------
+    components : (signal_len, n_components) array
+    weights    : (n_components, n_signals) array
+    stretch    : (n_components, n_signals) array
+
+    Returns
+    -------
+    reconstructed_matrix : (signal_len, n_signals) array
+    """
+
+    signal_len = components.shape[0]
+    n_signals = weights.shape[1]
+    n_components = components.shape[1]
+
+    reconstructed_matrix = np.zeros((signal_len, n_signals))
+    sample_indices = np.arange(signal_len)
+
+    for comp in range(n_components):  # loop over components
+        reconstructed_matrix += (
+            np.interp(
+                sample_indices[:, None] / stretch[comp][None, :],  # fractional positions (signal_len, n_signals)
+                sample_indices,  # (signal_len,)
+                components[:, comp],  # component profile (signal_len,)
+                left=components[0, comp],
+                right=components[-1, comp],
+            )
+            * weights[comp][None, :]  # broadcast (n_signals,) over rows
+        )
+
+    return reconstructed_matrix
