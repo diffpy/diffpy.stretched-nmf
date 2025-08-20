@@ -702,7 +702,7 @@ def cubic_largest_real_root(p, q):
     return y
 
 
-def reconstruct_matrix(components=None, weights=None, stretch=None):
+def reconstruct_matrix(components, weights, stretch):
     """
     Construct the approximation of the source matrix corresponding to the
     given components, weights, and stretch factors.
