@@ -83,7 +83,7 @@ class SNMFOptimizer:
         ----------
         source_matrix : ndarray
             The data to be decomposed. Shape is (length_of_signal, number_of_conditions).
-        init_weights : ndarray Optional  Default = rng.beta(a=2.5, b=1.5, size=(n_components, n_signals))
+        init_weights : ndarray Optional  Default = rng.beta(a=2.0, b=2.0, size=(n_components, n_signals))
             The initial guesses for the component weights at each stretching condition.
             Shape is (number_of_components, number_of_signals) Must provide exactly one
             of this or n_components.
