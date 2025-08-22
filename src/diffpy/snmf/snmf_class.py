@@ -217,6 +217,8 @@ class SNMFOptimizer:
 
         self.normalize_results()
 
+        return self
+
     def normalize_results(self):
         # Select our best results for normalization
         self.components_ = self.best_matrices[0]
