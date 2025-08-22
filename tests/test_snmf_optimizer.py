@@ -36,13 +36,11 @@ def test_final_objective_below_threshold(inputs):
         init_components=inputs["components"],
         init_stretch=inputs["stretch"],
         show_plots=False,
-        rho=1e12,
-        eta=610,
         random_state=1,
         min_iter=5,
         max_iter=5,
     )
-    model.fit()
+    model.fit(rho=1e12, eta=610)
 
     # Basic sanity check and the actual assertion
     assert np.isfinite(model.objective_function)

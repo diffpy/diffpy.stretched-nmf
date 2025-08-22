@@ -69,8 +69,6 @@ class SNMFOptimizer:
         init_weights=None,
         init_components=None,
         init_stretch=None,
-        rho=0,
-        eta=0,
         max_iter=500,
         min_iter=20,
         tol=5e-7,
@@ -78,7 +76,7 @@ class SNMFOptimizer:
         random_state=None,
         show_plots=False,
     ):
-        """Initialize an instance of SNMF and run the optimization.
+        """Initialize an instance of sNMF.
 
         Parameters
         ----------
@@ -95,14 +93,6 @@ class SNMFOptimizer:
                 0, 1e-3, size=(self.n_components, self.n_signals)
             The initial guesses for the stretching factor for each component, at each
             condition (for each signal). Shape is (number_of_components, number_of_signals).
-        rho : float Optional  Default = 0
-            The stretching factor that influences the decomposition. Zero corresponds to no
-            stretching present. Relatively insensitive and typically adjusted in powers of 10.
-        eta : int Optional  Default = 0
-            The sparsity factor that influences the decomposition. Should be set to zero for
-            non-sparse data such as PDF. Can be used to improve results for sparse data such
-            as XRD, but due to instability, should be used only after first selecting the
-            best value for rho. Suggested adjustment is by powers of 2.
         max_iter : int Optional Default = 500
             The maximum number of times to update each of A, X, and Y before stopping
             the optimization.
@@ -121,8 +111,6 @@ class SNMFOptimizer:
         """
 
         self.source_matrix = source_matrix
-        self.rho = rho
-        self.eta = eta
         self.tol = tol
         self.max_iter = max_iter
         self.min_iter = min_iter
@@ -172,7 +160,23 @@ class SNMFOptimizer:
             [1, -2, 1], offsets=[0, 1, 2], shape=(self.n_signals - 2, self.n_signals)
         )
 
-    def fit(self):
+    def fit(self, rho=0, eta=0):
+        """Run the sNMF optimization with the given parameters, using the setup from __init__.
+
+        Parameters
+        ----------
+        rho : float Optional  Default = 0
+            The stretching factor that influences the decomposition. Zero corresponds to no
+            stretching present. Relatively insensitive and typically adjusted in powers of 10.
+        eta : int Optional  Default = 0
+            The sparsity factor that influences the decomposition. Should be set to zero for
+            non-sparse data such as PDF. Can be used to improve results for sparse data such
+            as XRD, but due to instability, should be used only after first selecting the
+            best value for rho. Suggested adjustment is by powers of 2.
+        """
+
+        self.rho = rho
+        self.eta = eta
 
         # Set up residual matrix, objective function, and history
         self.residuals = self.get_residual_matrix()

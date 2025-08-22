@@ -15,7 +15,7 @@ my_model = SNMFOptimizer(
     init_stretch=init_stretch_file,
     show_plots=True,
 )
-my_model.fit()
+my_model.fit(rho=1e12, eta=610)
 
 print("Done")
 np.savetxt("my_norm_components.txt", my_model.components_, fmt="%.6g", delimiter=" ")
