@@ -9,9 +9,10 @@ from diffpy.snmf.plotter import SNMFPlotter
 class SNMFOptimizer:
     """An implementation of stretched NMF (sNMF), including sparse stretched NMF.
 
-    Instantiating the SNMFOptimizer class runs all the analysis immediately.
-    The results matrices can then be accessed as instance attributes
-    of the class (components, weights, and stretch).
+    Instantiating the SNMFOptimizer class prepares initial guesses and sets up the
+    optimization. It can then be run using fit().
+    The results matrices can be accessed as instance attributes
+    of the class (components_, weights_, and stretch_).
 
     For more information on sNMF, please reference:
     Gu, R., Rakita, Y., Lan, L. et al. Stretched non-negative matrix factorization.
