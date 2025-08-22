@@ -42,6 +42,7 @@ def test_final_objective_below_threshold(inputs):
         min_iter=5,
         max_iter=5,
     )
+    model.fit()
 
     # Basic sanity check and the actual assertion
     assert np.isfinite(model.objective_function)
