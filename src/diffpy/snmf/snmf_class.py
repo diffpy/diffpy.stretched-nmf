@@ -124,6 +124,7 @@ class SNMFOptimizer:
         self.eta = eta
         self.tol = tol
         self.max_iter = max_iter
+        self.min_iter = min_iter
         # Capture matrix dimensions
         self.signal_length, self.n_signals = source_matrix.shape
         self.num_updates = 0
@@ -170,6 +171,8 @@ class SNMFOptimizer:
             [1, -2, 1], offsets=[0, 1, 2], shape=(self.n_signals - 2, self.n_signals)
         )
 
+    def fit(self):
+
         # Set up residual matrix, objective function, and history
         self.residuals = self.get_residual_matrix()
         self.objective_function = self.get_objective_function()
@@ -184,9 +187,9 @@ class SNMFOptimizer:
         self._prev_grad_components = np.zeros_like(self.components_)
 
         regularization_term = (
-            0.5 * rho * np.linalg.norm(self._spline_smooth_operator @ self.stretch_.T, "fro") ** 2
+            0.5 * self.rho * np.linalg.norm(self._spline_smooth_operator @ self.stretch_.T, "fro") ** 2
         )
-        sparsity_term = eta * np.sum(np.sqrt(self.components_))  # Square root penalty
+        sparsity_term = self.eta * np.sum(np.sqrt(self.components_))  # Square root penalty
         print(
             f"Start, Objective function: {self.objective_function:.5e}"
             f", Obj - reg/sparse: {self.objective_function - regularization_term - sparsity_term:.5e}"
@@ -198,9 +201,9 @@ class SNMFOptimizer:
             self.outer_loop()
             # Print diagnostics
             regularization_term = (
-                0.5 * rho * np.linalg.norm(self._spline_smooth_operator @ self.stretch_.T, "fro") ** 2
+                0.5 * self.rho * np.linalg.norm(self._spline_smooth_operator @ self.stretch_.T, "fro") ** 2
             )
-            sparsity_term = eta * np.sum(np.sqrt(self.components_))  # Square root penalty
+            sparsity_term = self.eta * np.sum(np.sqrt(self.components_))  # Square root penalty
             print(
                 f"Obj fun: {self.objective_function:.5e}, "
                 f"Obj - reg/sparse: {self.objective_function - regularization_term - sparsity_term:.5e}, "
@@ -208,8 +211,8 @@ class SNMFOptimizer:
             )
 
             # Convergence check: Stop if diffun is small and at least min_iter iterations have passed
-            print("Checking if ", self.objective_difference, " < ", self.objective_function * tol)
-            if self.objective_difference < self.objective_function * tol and outiter >= min_iter:
+            print("Checking if ", self.objective_difference, " < ", self.objective_function * self.tol)
+            if self.objective_difference < self.objective_function * self.tol and outiter >= self.min_iter:
                 break
 
         self.normalize_results()
