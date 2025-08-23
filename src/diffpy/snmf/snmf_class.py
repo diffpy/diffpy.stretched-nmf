@@ -155,12 +155,17 @@ class SNMFOptimizer:
         self.components_ = np.maximum(0, self.components_)
         self.weights_ = np.maximum(0, self.weights_)
 
+        # Store the initial components, weights, and stretch
+        self.init_components = self.components_
+        self.init_weights = self.weights_
+        self.init_stretch = self.stretch_
+
         # Second-order spline: Tridiagonal (-2 on diagonal, 1 on sub/superdiagonals)
         self._spline_smooth_operator = 0.25 * diags(
             [1, -2, 1], offsets=[0, 1, 2], shape=(self.n_signals - 2, self.n_signals)
         )
 
-    def fit(self, rho=0, eta=0):
+    def fit(self, rho=0, eta=0, reset=True):
         """Run the sNMF optimization with the given parameters, using the setup from __init__.
 
         Parameters
@@ -173,7 +178,16 @@ class SNMFOptimizer:
             non-sparse data such as PDF. Can be used to improve results for sparse data such
             as XRD, but due to instability, should be used only after first selecting the
             best value for rho. Suggested adjustment is by powers of 2.
+        reset : boolean Optional  Default = True
+            Whether to return to the initial set of components_, weights_, and stretch_ before
+            running the optimization. When set to False, sequential calls to fit() will use the
+            output of the previous fit() as their input.
         """
+
+        if reset:
+            self.components_ = self.init_components
+            self.weights_ = self.init_weights
+            self.stretch_ = self.init_stretch
 
         self.rho = rho
         self.eta = eta
