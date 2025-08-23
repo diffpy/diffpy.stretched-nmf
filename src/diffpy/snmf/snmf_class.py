@@ -156,9 +156,9 @@ class SNMFOptimizer:
         self.weights_ = np.maximum(0, self.weights_)
 
         # Store the initial components, weights, and stretch
-        self.init_components = self.components_
-        self.init_weights = self.weights_
-        self.init_stretch = self.stretch_
+        self.init_components = self.components_.copy()
+        self.init_weights = self.weights_.copy()
+        self.init_stretch = self.stretch_.copy()
 
         # Second-order spline: Tridiagonal (-2 on diagonal, 1 on sub/superdiagonals)
         self._spline_smooth_operator = 0.25 * diags(
@@ -185,9 +185,9 @@ class SNMFOptimizer:
         """
 
         if reset:
-            self.components_ = self.init_components
-            self.weights_ = self.init_weights
-            self.stretch_ = self.init_stretch
+            self.components_ = self.init_components.copy()
+            self.weights_ = self.init_weights.copy()
+            self.stretch_ = self.init_stretch.copy()
 
         self.rho = rho
         self.eta = eta
