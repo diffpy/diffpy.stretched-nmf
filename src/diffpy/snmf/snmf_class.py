@@ -389,17 +389,12 @@ class SNMFOptimizer:
 
         # Compute scaled indices
         stretch_flat = stretch.reshape(1, self.n_signals * self.n_components) ** -1
-        stretch_tiled = np.tile(stretch_flat, (self.signal_length, 1))
 
         # Compute `fractional_indices`
-        fractional_indices = (
-            np.tile(np.arange(self.signal_length)[:, None], (1, self.n_signals * self.n_components))
-            * stretch_tiled
-        )
+        fractional_indices = np.arange(self.signal_length)[:, None] * stretch_flat
 
         # Weighting matrix
         weights_flat = weights.reshape(1, self.n_signals * self.n_components)
-        weights_tiled = np.tile(weights_flat, (self.signal_length, 1))
 
         # Bias for indexing into reshaped components
         # TODO break this up or describe what it does better
@@ -439,17 +434,17 @@ class SNMFOptimizer:
         unweighted_stretched_comps = (
             comp_values_1 * (1 - fractional_floor_indices) + comp_values_2 * fractional_floor_indices
         )
-        stretched_components = unweighted_stretched_comps * weights_tiled  # Apply weighting
+        stretched_components = unweighted_stretched_comps * weights_flat  # Apply weighting
 
         # Compute first derivative
-        di = -fractional_indices * stretch_tiled
+        di = -fractional_indices * stretch_flat
         d_comps_unweighted = comp_values_1 * (-di) + comp_values_2 * di
-        d_stretched_components = d_comps_unweighted * weights_tiled
+        d_stretched_components = d_comps_unweighted * weights_flat
 
         # Compute second derivative
-        ddi = -di * stretch_tiled * 2
+        ddi = -di * stretch_flat * 2
         dd_comps_unweighted = comp_values_1 * (-ddi) + comp_values_2 * ddi
-        dd_stretched_components = dd_comps_unweighted * weights_tiled
+        dd_stretched_components = dd_comps_unweighted * weights_flat
 
         return stretched_components, d_stretched_components, dd_stretched_components
 
