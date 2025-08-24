@@ -384,6 +384,9 @@ class SNMFOptimizer:
         if stretch is None:
             stretch = self.stretch_
 
+        eps = 1e-8  # guard against divide by zero/NaN stretches
+        stretch = np.maximum(stretch, eps)
+
         # Compute scaled indices
         stretch_flat = stretch.reshape(1, self.n_signals * self.n_components) ** -1
         stretch_tiled = np.tile(stretch_flat, (self.signal_length, 1))
