@@ -372,11 +372,31 @@ class SNMFOptimizer:
 
     def apply_interpolation_matrix(self, components=None, weights=None, stretch=None):
         """
-        Applies an interpolation-based transformation to the 'components' using `stretch`,
-        weighted by `weights`. Optionally computes first (`d_stretched_components`) and
-        second (`dd_stretched_components`) derivatives.
+        Interpolates each component along its sample axis according to per-(component, signal)
+        stretch factors, then applies per-(component, signal) weights. Also computes the
+        first and second derivatives with respect to stretch. Left and right, respectively,
+        refer to the sample prior to and subsequent to the interpolated sample's position.
+
+        Inputs
+        ------
+        components : array, shape (signal_len, n_components)
+            Each column is a component with signal_len samples.
+        weights : array, shape (n_components, n_signals)
+            Per-(component, signal) weights.
+        stretch : array, shape (n_components, n_signals)
+            Per-(component, signal) stretch factors.
+
+        Outputs
+        -------
+        stretched_components : array, shape (signal_len, n_components * n_signals)
+            Interpolated and weighted components.
+        d_stretched_components : array, shape (signal_len, n_components * n_signals)
+            First derivatives with respect to stretch.
+        dd_stretched_components : array, shape (signal_len, n_components * n_signals)
+            Second derivatives with respect to stretch.
         """
 
+        # --- Defaults ---
         if components is None:
             components = self.components_
         if weights is None:
@@ -384,75 +404,54 @@ class SNMFOptimizer:
         if stretch is None:
             stretch = self.stretch_
 
-        eps = 1e-8  # guard against divide by zero/NaN stretches
-        stretch = np.maximum(stretch, eps)
+        # Dimensions
+        signal_len = components.shape[0]  # number of samples
+        n_components = components.shape[1]  # number of components
+        n_signals = weights.shape[1]  # number of signals
 
-        # Compute scaled indices
-        stretch_flat = stretch.reshape(1, self.n_signals * self.n_components) ** -1
+        # Guard stretches
+        eps = 1e-8
+        stretch = np.clip(stretch, eps, None)
+        stretch_inv = 1.0 / stretch
 
-        # Compute `fractional_indices`
-        fractional_indices = np.arange(self.signal_length)[:, None] * stretch_flat
+        # Apply stretching to the original sample indices, represented as a "time-stretch"
+        t = np.arange(signal_len, dtype=float)[:, None, None] * stretch_inv[None, :, :]
+        # has shape (signal_len, n_components, n_signals)
 
-        # Weighting matrix
-        weights_flat = weights.reshape(1, self.n_signals * self.n_components)
+        # For each stretched coordinate, find its prior integer (original) index and their difference
+        i0 = np.floor(t).astype(np.int64)  # prior original index
+        alpha = t - i0.astype(float)  # fractional distance between left/right
 
-        # Bias for indexing into reshaped components
-        # TODO break this up or describe what it does better
-        bias = np.kron(
-            np.arange(self.n_components) * (self.signal_length + 1),
-            np.ones((self.signal_length, self.n_signals), dtype=int),
-        ).reshape(self.signal_length, self.n_components * self.n_signals)
+        # Clip indices to valid range (0, signal_len - 1) to maintain original size
+        max_idx = signal_len - 1
+        i0 = np.clip(i0, 0, max_idx)
+        i1 = np.clip(i0 + 1, 0, max_idx)
 
-        # Handle boundary conditions for interpolation
-        components_bounded = np.vstack(
-            [components, components[-1, :]]
-        )  # Duplicate last row (like MATLAB, not sure why)
+        # Gather sample values
+        comps_3d = components[:, :, None]  # expand components by a dimension for broadcasting across n_signals
+        c0 = np.take_along_axis(comps_3d, i0, axis=0)  # left sample values
+        c1 = np.take_along_axis(comps_3d, i1, axis=0)  # right sample values
 
-        # Compute floor indices
-        floor_indices = np.floor(fractional_indices).astype(int)
+        # Linear interpolation to determine stretched sample values
+        interp = c0 * (1.0 - alpha) + c1 * alpha
+        interp_weighted = interp * weights[None, :, :]
 
-        floor_indices_1 = np.minimum(floor_indices + 1, self.signal_length)
-        floor_indices_2 = np.minimum(floor_indices_1 + 1, self.signal_length)
+        # Derivatives
+        di = -t * stretch_inv[None, :, :]  # first-derivative coefficient
+        ddi = -di * stretch_inv[None, :, :] * 2.0  # second-derivative coefficient
 
-        # Compute fractional part
-        fractional_floor_indices = fractional_indices - floor_indices
+        d_unweighted = c0 * (-di) + c1 * di
+        dd_unweighted = c0 * (-ddi) + c1 * ddi
 
-        # Compute offset indices
-        offset_indices_1 = floor_indices_1 + bias
-        offset_indices_2 = floor_indices_2 + bias
+        d_weighted = d_unweighted * weights[None, :, :]
+        dd_weighted = dd_unweighted * weights[None, :, :]
 
-        # Flatten components once (Fortran order, column-major)
-        components_bounded_flat = components_bounded.ravel(order="F")
-
-        # Pre-compute flattened indices
-        offset_indices_1_flat = (offset_indices_1 - 1).ravel(order="F")
-        offset_indices_2_flat = (offset_indices_2 - 1).ravel(order="F")
-
-        # Extract values using pre-flattened arrays
-        comp_values_1 = components_bounded_flat[offset_indices_1_flat].reshape(
-            self.signal_length, self.n_components * self.n_signals, order="F"
+        # Flatten back to expected shape (signal_len, n_components * n_signals)
+        return (
+            interp_weighted.reshape(signal_len, n_components * n_signals),
+            d_weighted.reshape(signal_len, n_components * n_signals),
+            dd_weighted.reshape(signal_len, n_components * n_signals),
         )
-        comp_values_2 = components_bounded_flat[offset_indices_2_flat].reshape(
-            self.signal_length, self.n_components * self.n_signals, order="F"
-        )
-
-        # Interpolation
-        unweighted_stretched_comps = (
-            comp_values_1 * (1 - fractional_floor_indices) + comp_values_2 * fractional_floor_indices
-        )
-        stretched_components = unweighted_stretched_comps * weights_flat  # Apply weighting
-
-        # Compute first derivative
-        di = -fractional_indices * stretch_flat
-        d_comps_unweighted = comp_values_1 * (-di) + comp_values_2 * di
-        d_stretched_components = d_comps_unweighted * weights_flat
-
-        # Compute second derivative
-        ddi = -di * stretch_flat * 2
-        dd_comps_unweighted = comp_values_1 * (-ddi) + comp_values_2 * ddi
-        dd_stretched_components = dd_comps_unweighted * weights_flat
-
-        return stretched_components, d_stretched_components, dd_stretched_components
 
     def apply_transformation_matrix(self, stretch=None, weights=None, residuals=None):
         """
