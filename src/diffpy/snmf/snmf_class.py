@@ -370,7 +370,7 @@ class SNMFOptimizer:
         function = residual_term + regularization_term + sparsity_term
         return function
 
-    def apply_interpolation_matrix(self, components=None, weights=None, stretch=None):
+    def compute_stretched_components(self, components=None, weights=None, stretch=None):
         """
         Interpolates each component along its sample axis according to per-(component, signal)
         stretch factors, then applies per-(component, signal) weights. Also computes the
@@ -563,7 +563,7 @@ class SNMFOptimizer:
         Updates `components` using gradient-based optimization with adaptive step size.
         """
         # Compute stretched components using the interpolation function
-        stretched_components, _, _ = self.apply_interpolation_matrix()  # Discard the derivatives
+        stretched_components, _, _ = self.compute_stretched_components()  # Discard the derivatives
         # Compute reshaped_stretched_components and component_residuals
         intermediate_reshaped = stretched_components.flatten(order="F").reshape(
             (self.signal_length * self.n_signals, self.n_components), order="F"
@@ -651,7 +651,9 @@ class SNMFOptimizer:
         if stretch is None:
             stretch = self.stretch_
 
-        stretched_components, d_stretch_comps, dd_stretch_comps = self.apply_interpolation_matrix(stretch=stretch)
+        stretched_components, d_stretch_comps, dd_stretch_comps = self.compute_stretched_components(
+            stretch=stretch
+        )
         intermediate = stretched_components.flatten(order="F").reshape(
             (self.signal_length * self.n_signals, self.n_components), order="F"
         )
@@ -754,8 +756,8 @@ def reconstruct_matrix(components, weights, stretch):
     """
 
     signal_len = components.shape[0]
-    n_signals = weights.shape[1]
     n_components = components.shape[1]
+    n_signals = weights.shape[1]
 
     reconstructed_matrix = np.zeros((signal_len, n_signals))
     sample_indices = np.arange(signal_len)
