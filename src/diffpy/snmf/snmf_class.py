@@ -421,12 +421,18 @@ class SNMFOptimizer:
         offset_indices_1 = floor_indices_1 + bias
         offset_indices_2 = floor_indices_2 + bias
 
-        # Extract values
-        # Note: this "-1" corrects an off-by-one error that may have originated in an earlier line
-        comp_values_1 = components_bounded.flatten(order="F")[(offset_indices_1 - 1).ravel(order="F")].reshape(
+        # Flatten components once (Fortran order, column-major)
+        components_bounded_flat = components_bounded.ravel(order="F")
+
+        # Pre-compute flattened indices
+        offset_indices_1_flat = (offset_indices_1 - 1).ravel(order="F")
+        offset_indices_2_flat = (offset_indices_2 - 1).ravel(order="F")
+
+        # Extract values using pre-flattened arrays
+        comp_values_1 = components_bounded_flat[offset_indices_1_flat].reshape(
             self.signal_length, self.n_components * self.n_signals, order="F"
-        )  # order = F uses FORTRAN, column major order
-        comp_values_2 = components_bounded.flatten(order="F")[(offset_indices_2 - 1).ravel(order="F")].reshape(
+        )
+        comp_values_2 = components_bounded_flat[offset_indices_2_flat].reshape(
             self.signal_length, self.n_components * self.n_signals, order="F"
         )
 
