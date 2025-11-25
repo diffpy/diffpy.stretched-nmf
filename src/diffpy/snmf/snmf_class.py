@@ -359,16 +359,30 @@ class SNMFOptimizer:
         return residuals
 
     def get_objective_function(self, residuals=None, stretch=None):
-        if residuals is None:
-            residuals = self.residuals
-        if stretch is None:
-            stretch = self.stretch_
-        residual_term = 0.5 * np.linalg.norm(residuals, "fro") ** 2
-        regularization_term = 0.5 * self.rho * np.linalg.norm(self._spline_smooth_operator @ stretch.T, "fro") ** 2
-        sparsity_term = self.eta * np.sum(np.sqrt(self.components_))  # Square root penalty
-        # Final objective function value
-        function = residual_term + regularization_term + sparsity_term
-        return function
+        """
+        Return the objective value, passing stored attributes or overrides
+        to _compute_objective_function().
+
+        Parameters
+        ----------
+        residuals : ndarray, optional
+            Residual matrix to use instead of self.residuals.
+        stretch : ndarray, optional
+            Stretch matrix to use instead of self.stretch_.
+
+        Returns
+        -------
+        float
+            Current objective function value.
+        """
+        return SNMFOptimizer._compute_objective_function(
+            components=self.components_,
+            residuals=self.residuals if residuals is None else residuals,
+            stretch=self.stretch_ if stretch is None else stretch,
+            rho=self.rho,
+            eta=self.eta,
+            spline_smooth_operator=self._spline_smooth_operator,
+        )
 
     def compute_stretched_components(self, components=None, weights=None, stretch=None):
         """
@@ -701,6 +715,59 @@ class SNMFOptimizer:
 
         # Update stretch with the optimized values
         self.stretch_ = result.x.reshape(self.stretch_.shape)
+
+    @staticmethod
+    def _compute_objective_function(components, residuals, stretch, rho, eta, spline_smooth_operator):
+        r"""
+        Computes the objective function used in stretched non-negative matrix factorization.
+
+        Parameters
+        ----------
+        components : ndarray
+            Non-negative matrix of component signals :math:`X`.
+        residuals : ndarray
+            Difference between reconstructed and observed data.
+        stretch : ndarray
+            Stretching factors :math:`A` applied to each component across samples.
+        rho : float
+            Regularization parameter enforcing smooth variation in :math:`A`.
+        eta : float
+            Sparsity-promoting regularization parameter applied to :math:`X`.
+        spline_smooth_operator : ndarray
+            Linear operator :math:`L` penalizing non-smooth changes in :math:`A`.
+
+        Returns
+        -------
+        float
+            Value of the stretched-NMF objective function.
+
+        Notes
+        -----
+        The stretched-NMF objective function :math:`J` is
+
+        .. math::
+
+           J(X, Y, A) =
+              \tfrac{1}{2} \lVert Z - Y\,S(A)X \rVert_F^2
+              + \tfrac{\rho}{2} \lVert L A \rVert_F^2
+              + \eta \sum_{i,j} \sqrt{X_{ij}} \,,
+
+        where :math:`Z` is the data matrix, :math:`Y` contains the non-negative
+        weights, :math:`S(A)` denotes the spline-interpolated stretching operator,
+        and :math:`\lVert \cdot \rVert_F` is the Frobenius norm.
+
+        Special cases
+        -------------
+        - :math:`\rho = 0` — no smoothness regularization on stretching factors.
+        - :math:`\eta = 0` — no sparsity promotion on components.
+        - :math:`\rho = \eta = 0` — reduces to the classical NMF least-squares
+          objective :math:`\tfrac{1}{2} \lVert Z - YX \rVert_F^2`.
+
+        """
+        residual_term = 0.5 * np.linalg.norm(residuals, "fro") ** 2
+        regularization_term = 0.5 * rho * np.linalg.norm(spline_smooth_operator @ stretch.T, "fro") ** 2
+        sparsity_term = eta * np.sum(np.sqrt(components))
+        return residual_term + regularization_term + sparsity_term
 
 
 def cubic_largest_real_root(p, q):
