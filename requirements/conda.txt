@@ -1,4 +1,5 @@
 numpy
+matplotlib
 scipy
 cvxpy
 diffpy.utils
