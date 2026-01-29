@@ -6,7 +6,11 @@ class SNMFPlotter:
     def __init__(self, figsize=(12, 4)):
         plt.ion()
         self.fig, self.axes = plt.subplots(1, 3, figsize=figsize)
-        titles = ["Components", "Weights (rows as series)", "Stretch (rows as series)"]
+        titles = [
+            "Components",
+            "Weights (rows as series)",
+            "Stretch (rows as series)",
+        ]
         for ax, t in zip(self.axes, titles):
             ax.set_title(t)
         self.lines = {"components": [], "weights": [], "stretch": []}

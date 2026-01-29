@@ -15,13 +15,17 @@ _required = [
     "init_weights.txt",
 ]
 _missing = [f for f in _required if not (DATA_DIR / f).exists()]
-pytestmark = pytest.mark.skipif(_missing, reason=f"Missing test data files: {_missing}")
+pytestmark = pytest.mark.skipif(
+    _missing, reason=f"Missing test data files: {_missing}"
+)
 
 
 @pytest.fixture(scope="module")
 def inputs():
     return {
-        "components": np.loadtxt(DATA_DIR / "init_components.txt", dtype=float),
+        "components": np.loadtxt(
+            DATA_DIR / "init_components.txt", dtype=float
+        ),
         "source": np.loadtxt(DATA_DIR / "source_matrix.txt", dtype=float),
         "stretch": np.loadtxt(DATA_DIR / "init_stretch.txt", dtype=float),
         "weights": np.loadtxt(DATA_DIR / "init_weights.txt", dtype=float),
