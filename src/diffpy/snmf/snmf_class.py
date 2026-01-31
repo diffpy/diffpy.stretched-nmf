@@ -7,7 +7,8 @@ from diffpy.snmf.plotter import SNMFPlotter
 
 
 class SNMFOptimizer:
-    """An implementation of stretched NMF (sNMF), including sparse stretched NMF.
+    """An implementation of stretched NMF (sNMF), including sparse
+    stretched NMF.
 
     Instantiating the SNMFOptimizer class prepares initial guesses and sets up the
     optimization. It can then be run using fit().
@@ -174,7 +175,8 @@ class SNMFOptimizer:
         )
 
     def fit(self, rho=0, eta=0, reset=True):
-        """Run the sNMF optimization with the given parameters, using the setup from __init__.
+        """Run the sNMF optimization with the given parameters, using
+        the setup from __init__.
 
         Parameters
         ----------
@@ -412,8 +414,8 @@ class SNMFOptimizer:
             )
 
     def get_residual_matrix(self, components=None, weights=None, stretch=None):
-        """
-        Return the residuals (difference) between the source matrix and its reconstruction.
+        """Return the residuals (difference) between the source matrix
+        and its reconstruction.
 
         Parameters
         ----------
@@ -439,9 +441,8 @@ class SNMFOptimizer:
         return residuals
 
     def get_objective_function(self, residuals=None, stretch=None):
-        """
-        Return the objective value, passing stored attributes or overrides
-        to _compute_objective_function().
+        """Return the objective value, passing stored attributes or
+        overrides to _compute_objective_function().
 
         Parameters
         ----------
@@ -467,11 +468,12 @@ class SNMFOptimizer:
     def compute_stretched_components(
         self, components=None, weights=None, stretch=None
     ):
-        """
-        Interpolates each component along its sample axis according to per-(component, signal)
-        stretch factors, then applies per-(component, signal) weights. Also computes the
-        first and second derivatives with respect to stretch. Left and right, respectively,
-        refer to the sample prior to and subsequent to the interpolated sample's position.
+        """Interpolates each component along its sample axis according
+        to per-(component, signal) stretch factors, then applies
+        per-(component, signal) weights. Also computes the first and
+        second derivatives with respect to stretch. Left and right,
+        respectively, refer to the sample prior to and subsequent to the
+        interpolated sample's position.
 
         Inputs
         ------
@@ -559,10 +561,9 @@ class SNMFOptimizer:
     def apply_transformation_matrix(
         self, stretch=None, weights=None, residuals=None
     ):
-        """
-        Computes the transformation matrix `stretch_transformed` for residuals,
-        using scaling matrix `stretch` and weight coefficients `weights`.
-        """
+        """Computes the transformation matrix `stretch_transformed` for
+        residuals, using scaling matrix `stretch` and weight
+        coefficients `weights`."""
 
         if stretch is None:
             stretch = self.stretch_
@@ -679,9 +680,8 @@ class SNMFOptimizer:
         )  # Ensure non-negative values in case of solver tolerance issues
 
     def update_components(self):
-        """
-        Updates `components` using gradient-based optimization with adaptive step size.
-        """
+        """Updates `components` using gradient-based optimization with
+        adaptive step size."""
         # Compute stretched components using the interpolation function
         stretched_components, _, _ = (
             self.compute_stretched_components()
@@ -760,10 +760,9 @@ class SNMFOptimizer:
                 break
 
     def update_weights(self):
-        """
-        Updates weights by building the stretched component matrix `stretched_comps` with np.interp
-        and solving a quadratic program for each signal.
-        """
+        """Updates weights by building the stretched component matrix
+        `stretched_comps` with np.interp and solving a quadratic program
+        for each signal."""
 
         sample_indices = np.arange(self.signal_length)
         for signal in range(self.n_signals):
@@ -825,9 +824,8 @@ class SNMFOptimizer:
         return fun, gra
 
     def update_stretch(self):
-        """
-        Updates stretching matrix using constrained optimization (equivalent to fmincon in MATLAB).
-        """
+        """Updates stretching matrix using constrained optimization
+        (equivalent to fmincon in MATLAB)."""
 
         # Flatten stretch for compatibility with the optimizer (since SciPy expects 1D input)
         stretch_flat_initial = self.stretch_.flatten()
@@ -862,8 +860,8 @@ class SNMFOptimizer:
     def _compute_objective_function(
         components, residuals, stretch, rho, eta, spline_smooth_operator
     ):
-        r"""
-        Computes the objective function used in stretched non-negative matrix factorization.
+        r"""Computes the objective function used in stretched non-
+        negative matrix factorization.
 
         Parameters
         ----------
@@ -906,7 +904,6 @@ class SNMFOptimizer:
         - :math:`\eta = 0` — no sparsity promotion on components.
         - :math:`\rho = \eta = 0` — reduces to the classical NMF least-squares
           objective :math:`\tfrac{1}{2} \lVert Z - YX \rVert_F^2`.
-
         """
         residual_term = 0.5 * np.linalg.norm(residuals, "fro") ** 2
         regularization_term = (
@@ -919,9 +916,8 @@ class SNMFOptimizer:
 
 
 def cubic_largest_real_root(p, q):
-    """
-    Solves x^3 + p*x + q = 0 element-wise for matrices, returning the largest real root.
-    """
+    """Solves x^3 + p*x + q = 0 element-wise for matrices, returning the
+    largest real root."""
     # Handle special case where q == 0
     y = np.where(
         q == 0, np.maximum(0, -p) ** 0.5, np.zeros_like(p)
@@ -956,9 +952,8 @@ def cubic_largest_real_root(p, q):
 
 
 def reconstruct_matrix(components, weights, stretch):
-    """
-    Construct the approximation of the source matrix corresponding to the
-    given components, weights, and stretch factors.
+    """Construct the approximation of the source matrix corresponding to
+    the given components, weights, and stretch factors.
 
     Each component profile is stretched, interpolated to fractional positions,
     weighted per signal, and summed to form the reconstruction.
