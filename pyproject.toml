@@ -6,17 +6,17 @@ build-backend = "setuptools.build_meta"
 name = "diffpy.snmf"
 dynamic=['version', 'dependencies']
 authors = [
-  { name="Simon J.L. Billinge group", email="simon.billinge@gmail.com" },
+  { name="Simon Billinge", email="sb2896@columbia.edu" },
 ]
 maintainers = [
-  { name="Simon J.L. Billinge group", email="simon.billinge@gmail.com" },
+  { name="Simon Billinge", email="sb2896@columbia.edu" },
 ]
-description = "Python package implementing the stretched NMF algorithm."
-keywords = ['diffpy', 'PDF']
+description = "A python package implementing the stretched NMF algorithm."
+keywords = ['diffraction', 'PDF', 'x-ray', 'mapping']
 readme = "README.rst"
 requires-python = ">=3.11, <3.14"
 classifiers = [
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
@@ -42,14 +42,14 @@ template = "{tag}"
 dev_template = "{tag}"
 dirty_template = "{tag}"
 
-[project.scripts]
-snmf = "diffpy.snmf.stretchednmfapp:main"
-
 [tool.setuptools.packages.find]
 where = ["src"]  # list of folders that contain the packages (["."] by default)
 include = ["*"]  # package names should match these glob patterns (["*"] by default)
 exclude = []  # exclude packages matching these glob patterns (empty by default)
 namespaces = false  # to disable scanning PEP 420 namespaces (true by default)
+
+[project.scripts]
+diffpy-snmf = "diffpy.snmf.app:main"
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements/pip.txt"]}
@@ -59,29 +59,30 @@ exclude-file = ".codespell/ignore_lines.txt"
 ignore-words = ".codespell/ignore_words.txt"
 skip = "*.cif,*.dat"
 
+[tool.docformatter]
+recursive = true
+wrap-summaries = 72
+wrap-descriptions = 72
+
 [tool.black]
 line-length = 79
 include = '\.pyi?$'
 exclude = '''
 /(
     \.git
-| \.hg
-| \.mypy_cache
-| \.tox
-| \.venv
-| \.rst
-| \.txt
-| _build
-| buck-out
-| build
-| dist
-| blib2to3
-| tests/data
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | \.rst
+  | \.txt
+  | _build
+  | buck-out
+  | build
+  | dist
+
+  # The following are specific to Black, you probably don't want those.
+  | blib2to3
+  | tests/data
 )/
 '''
-
-[tool.pytest.ini_options]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-]
-testpaths = ["tests"]
