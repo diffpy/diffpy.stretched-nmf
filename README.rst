@@ -38,7 +38,10 @@
 
 A python package implementing the stretched NMF algorithm.
 
-* LONGER DESCRIPTION HERE
+This algorithm is designed to do an NMF factorization on a set of signals ignoring any uniform stretching of the signal
+on the independent variable axis. For example, for powder diffraction data taken from samples containing multiple
+chemical phases where the measurements were done at different temperatures and the materials were undergoing thermal
+expansion.
 
 For more information about the diffpy.snmf library, please consult our `online documentation <https://diffpy.github.io/diffpy.snmf>`_.
 
@@ -47,7 +50,10 @@ Citation
 
 If you use diffpy.snmf in a scientific publication, we would like you to cite this package as
 
-        diffpy.snmf Package, https://github.com/diffpy/diffpy.snmf
+        Ran Gu, Yevgeny Rakita, Ling Lan, Zach Thatcher, Gabrielle E. Kamm, Daniel O’Nolan, Brennan Mcbride, Allison Wustrow, James R. Neilson, Karena W. Chapman, Qiang Du, and Simon J. L. Billinge,
+   `Stretched Non-negative Matrix Factorization
+   <https://doi.org/10.1038/s41524-024-01377-5>`__,
+   *npj Comput Mater* **10**, 193 (2024).
 
 Installation
 ------------
