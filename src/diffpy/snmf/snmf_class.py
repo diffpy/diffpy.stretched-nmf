@@ -69,9 +69,9 @@ class SNMFOptimizer:
         init_weights=None,
         init_components=None,
         init_stretch=None,
-        max_iter=500,
+        max_iter=100,
         min_iter=20,
-        tol=5e-7,
+        tol=1e-6,
         n_components=None,
         random_state=None,
         show_plots=False,
@@ -125,8 +125,8 @@ class SNMFOptimizer:
             n_components is not None and init_weights is not None
         ):
             raise ValueError(
-                "Conflicting source for n_components. Must provide either init_weights or n_components "
-                "directly, but not both."
+                "Conflicting or missing source for n_components. Must provide either init_weights "
+                "or n_components directly, but not both."
             )
 
         # Initialize weights and determine number of components
@@ -181,6 +181,7 @@ class SNMFOptimizer:
         rho : float Optional  Default = 0
             The stretching factor that influences the decomposition. Zero corresponds to no
             stretching present. Relatively insensitive and typically adjusted in powers of 10.
+            If equal to zero, program acts like standard NMF.
         eta : int Optional  Default = 0
             The sparsity factor that influences the decomposition. Should be set to zero for
             non-sparse data such as PDF. Can be used to improve results for sparse data such
@@ -199,6 +200,10 @@ class SNMFOptimizer:
 
         self.rho = rho
         self.eta = eta
+
+        # If rho = 0, set stretching matrix to identity
+        if self.rho == 0:
+            self.stretch_ = np.ones_like(self.stretch_)
 
         # Set up residual matrix, objective function, and history
         self.residuals = self.get_residual_matrix()
@@ -386,30 +391,31 @@ class SNMFOptimizer:
             ):
                 break
 
-        self.update_stretch()
-        self.residuals = self.get_residual_matrix()
-        self.objective_function = self.get_objective_function()
-        print(
-            f"Objective function after update_stretch: {self.objective_function:.5e}"
-        )
-        self._objective_history.append(self.objective_function)
-        self.objective_difference = (
-            self._objective_history[-2] - self._objective_history[-1]
-        )
-        if self.objective_function < self.best_objective:
-            self.best_objective = self.objective_function
-            self.best_matrices = [
-                self.components_.copy(),
-                self.weights_.copy(),
-                self.stretch_.copy(),
-            ]
-        if self.plotter is not None:
-            self.plotter.update(
-                components=self.components_,
-                weights=self.weights_,
-                stretch=self.stretch_,
-                update_tag="stretch",
+        if not self.rho == 0:  # Don't update stretch if rho = 0
+            self.update_stretch()
+            self.residuals = self.get_residual_matrix()
+            self.objective_function = self.get_objective_function()
+            print(
+                f"Objective function after update_stretch: {self.objective_function:.5e}"
             )
+            self._objective_history.append(self.objective_function)
+            self.objective_difference = (
+                self._objective_history[-2] - self._objective_history[-1]
+            )
+            if self.objective_function < self.best_objective:
+                self.best_objective = self.objective_function
+                self.best_matrices = [
+                    self.components_.copy(),
+                    self.weights_.copy(),
+                    self.stretch_.copy(),
+                ]
+            if self.plotter is not None:
+                self.plotter.update(
+                    components=self.components_,
+                    weights=self.weights_,
+                    stretch=self.stretch_,
+                    update_tag="stretch",
+                )
 
     def get_residual_matrix(self, components=None, weights=None, stretch=None):
         """
