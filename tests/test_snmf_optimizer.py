@@ -53,9 +53,10 @@ def test_final_objective_below_threshold(inputs):
 
 @pytest.mark.parametrize(
     "inputs, expected",
-    # inputs tuple: (components, residuals, stretch, rho, eta, spline smoothness operator)
+    # inputs tuple:
+    # (components, residuals, stretch, rho, eta, spline smoothness operator)
     [
-        # Case 0: No smoothness or sparsity penalty, reduces to standard NMF objective
+        # Case 0: No smoothness or sparsity penalty, reduces to NMF objective
         # residual Frobenius norm^2 = 3^2 + 4^2 = 25 -> 0.5 * 25 = 12.5
         (
             (
