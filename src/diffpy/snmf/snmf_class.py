@@ -215,7 +215,7 @@ class SNMFOptimizer:
         self.eta = eta
 
         # Set stretch matrix to 1 if no stretching present
-        if rho == 0:
+        if self.rho == 0:
             self.stretch_ = np.ones_like(self.stretch_)
 
         # Set up residual matrix, objective function, and history
