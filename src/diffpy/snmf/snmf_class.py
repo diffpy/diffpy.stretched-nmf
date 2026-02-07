@@ -214,6 +214,10 @@ class SNMFOptimizer:
         self.rho = rho
         self.eta = eta
 
+        # Set stretch matrix to 1 if no stretching present
+        if rho == 0:
+            self.stretch_ = np.ones_like(self.stretch_)
+
         # Set up residual matrix, objective function, and history
         self.residuals = self.get_residual_matrix()
         self.objective_function = self.get_objective_function()
@@ -408,31 +412,33 @@ class SNMFOptimizer:
             ):
                 break
 
-        self.update_stretch()
-        self.residuals = self.get_residual_matrix()
-        self.objective_function = self.get_objective_function()
-        print(
-            f"Objective function after update_stretch: "
-            f"{self.objective_function:.5e}"
-        )
-        self._objective_history.append(self.objective_function)
-        self.objective_difference = (
-            self._objective_history[-2] - self._objective_history[-1]
-        )
-        if self.objective_function < self.best_objective:
-            self.best_objective = self.objective_function
-            self.best_matrices = [
-                self.components_.copy(),
-                self.weights_.copy(),
-                self.stretch_.copy(),
-            ]
-        if self.plotter is not None:
-            self.plotter.update(
-                components=self.components_,
-                weights=self.weights_,
-                stretch=self.stretch_,
-                update_tag="stretch",
+        # Skip updating stretch if no stretching factor
+        if not self.rho == 0:
+            self.update_stretch()
+            self.residuals = self.get_residual_matrix()
+            self.objective_function = self.get_objective_function()
+            print(
+                f"Objective function after update_stretch: "
+                f"{self.objective_function:.5e}"
             )
+            self._objective_history.append(self.objective_function)
+            self.objective_difference = (
+                self._objective_history[-2] - self._objective_history[-1]
+            )
+            if self.objective_function < self.best_objective:
+                self.best_objective = self.objective_function
+                self.best_matrices = [
+                    self.components_.copy(),
+                    self.weights_.copy(),
+                    self.stretch_.copy(),
+                ]
+            if self.plotter is not None:
+                self.plotter.update(
+                    components=self.components_,
+                    weights=self.weights_,
+                    stretch=self.stretch_,
+                    update_tag="stretch",
+                )
 
     def get_residual_matrix(self, components=None, weights=None, stretch=None):
         """Return the residuals (difference) between the source matrix
@@ -621,7 +627,8 @@ class SNMFOptimizer:
 
         # Expand row indices
         repm = np.tile(
-            np.arange(self.n_components), (self.signal_length, self.n_signals)
+            np.arange(self.n_components),
+            (self.signal_length, self.n_signals),  # noqa E501
         )
 
         # Compute transformations
@@ -740,7 +747,9 @@ class SNMFOptimizer:
                 * (self.components_ - self._prev_components)
             )  # Element-wise multiplication
             denom = (
-                np.linalg.norm(self.components_ - self._prev_components, "fro")
+                np.linalg.norm(
+                    self.components_ - self._prev_components, "fro"
+                )  # noqa E501
                 ** 2
             )  # Frobenius norm squared
             step_size = num / denom if denom > 0 else initial_step_size
@@ -937,7 +946,8 @@ class SNMFOptimizer:
         regularization_term = (
             0.5
             * rho
-            * np.linalg.norm(spline_smooth_operator @ stretch.T, "fro") ** 2
+            * np.linalg.norm(spline_smooth_operator @ stretch.T, "fro")
+            ** 2  # noqa E501
         )
         sparsity_term = eta * np.sum(np.sqrt(components))
         return residual_term + regularization_term + sparsity_term
