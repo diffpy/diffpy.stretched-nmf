@@ -6,3 +6,6 @@ mater
 
 ;; Frobenius norm used in np.linalg.norm
 fro
+
+;; alternative spelling of socioeconomic used in code of conduct
+socio-economic
