@@ -628,7 +628,7 @@ class SNMFOptimizer:
         # Expand row indices
         repm = np.tile(
             np.arange(self.n_components),
-            (self.signal_length, self.n_signals),  # noqa E501
+            (self.signal_length, self.n_signals),
         )
 
         # Compute transformations
@@ -747,9 +747,7 @@ class SNMFOptimizer:
                 * (self.components_ - self._prev_components)
             )  # Element-wise multiplication
             denom = (
-                np.linalg.norm(
-                    self.components_ - self._prev_components, "fro"
-                )  # noqa E501
+                np.linalg.norm(self.components_ - self._prev_components, "fro")
                 ** 2
             )  # Frobenius norm squared
             step_size = num / denom if denom > 0 else initial_step_size
@@ -946,8 +944,7 @@ class SNMFOptimizer:
         regularization_term = (
             0.5
             * rho
-            * np.linalg.norm(spline_smooth_operator @ stretch.T, "fro")
-            ** 2  # noqa E501
+            * np.linalg.norm(spline_smooth_operator @ stretch.T, "fro") ** 2
         )
         sparsity_term = eta * np.sum(np.sqrt(components))
         return residual_term + regularization_term + sparsity_term
