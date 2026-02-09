@@ -13,7 +13,7 @@ class SNMFOptimizer:
     Instantiating the SNMFOptimizer class prepares initial guesses and sets up
     the optimization. It can then be run using fit(). The results matrices can
     be accessed as instance attributes of the
-    class (components_, weights_, and stretch_).
+    class (``components_``, ``weights_``, and ``stretch_``).
 
     For more information on sNMF, please reference:
     Gu, R., Rakita, Y., Lan, L. et al.
@@ -22,16 +22,16 @@ class SNMFOptimizer:
 
     Attributes
     ----------
-    source_matrix : ndarray
+    source_matrix : numpy.ndarray
         The original, unmodified data to be decomposed and later,
         compared against. Shape is (length_of_signal, number_of_signals).
-    stretch_ : ndarray
+    stretch_ : numpy.ndarray
         The best guess (or while running, the current guess) for the stretching
         factor matrix.
-    components_ : ndarray
+    components_ : numpy.ndarray
         The best guess (or while running, the current guess) for the matrix of
         component intensities.
-    weights_ : ndarray
+    weights_ : numpy.ndarray
         The best guess (or while running, the current guess) for the matrix of
         component weights.
     rho : float
@@ -87,37 +87,39 @@ class SNMFOptimizer:
 
         Parameters
         ----------
-        source_matrix : ndarray
+        source_matrix : numpy.ndarray
             The data to be decomposed. Shape is (length_of_signal,
             number_of_conditions).
-        init_weights : ndarray Optional  Default = rng.beta(a=2.0, b=2.0)
+        init_weights : numpy.ndarray
             The initial guesses for the component weights at each stretching
             condition. Shape is (number_of_components, number_of_signals).
-            Must provide exactly one of this or n_components.
-        init_components : ndarray Optional  Default = rng.random()
+            Optional. Must provide exactly one of this or n_components.
+        init_components : numpy.ndarray
             The initial guesses for the intensities of each component per
             row/sample/angle. Shape is (length_of_signal,
             number_of_components).
-        init_stretch : ndarray Optional  Default = np.ones() + rng.normal()
+            Optional.
+        init_stretch : numpy.ndarray
             The initial guesses for the stretching factor for each component,
             at each condition (for each signal). Shape is
             (number_of_components, number_of_signals).
-        max_iter : int Optional Default = 500
+            Optional.
+        max_iter : int
             The maximum number of times to update each of A, X, and Y before
-            stopping the optimization.
-        tol : float Optional  Default = 5e-7
+            stopping the optimization. Optional.
+        tol : float
             The convergence threshold. This is the minimum fractional
             improvement in the objective function to allow without terminating
             the optimization. Note that a minimum of 20 updates are run before
-            this parameter is checked.
-        n_components : int  Optional  Default = None
+            this parameter is checked. Optional.
+        n_components : int
             The number of components to extract from source_matrix. Must be
-            provided when and only when Y0 is not provided.
-        random_state : int  Optional  Default = None
+            provided when and only when Y0 is not provided. Optional.
+        random_state : int
             The seed for the initial guesses at the matrices (A, X, and Y)
-            created by the decomposition.
-        show_plots : boolean Optional  Default = False
-            Enables plotting at each step of the decomposition.
+            created by the decomposition. Optional.
+        show_plots : bool
+            Enables plotting at each step of the decomposition. Optional.
         """
 
         self.source_matrix = source_matrix
@@ -189,20 +191,23 @@ class SNMFOptimizer:
 
         Parameters
         ----------
-        rho : float Optional  Default = 0
-            The stretching factor that influences the decomposition. Zero
+        rho : float
+            The stretching factor that influences the decomposition. Optional.
+            Zero
             corresponds to no stretching present. Relatively insensitive and
             typically adjusted in powers of 10.
-        eta : int Optional  Default = 0
-            The sparsity factor that influences the decomposition. Should be
+        eta : int
+            The sparsity factor that influences the decomposition. Optional.
+            Should be
             set to zero for non-sparse data such as PDF. Can be used to
             improve results for sparse data such as XRD, but due to
             instability, should be used only after first selecting the best
             value for rho. Suggested adjustment is by powers of 2.
-        reset : boolean Optional  Default = True
-            Whether to return to the initial set of components_, weights_,
-            and stretch_ before running the optimization. When set to False,
-            sequential calls to fit() will use the output of the previous
+        reset : bool
+            Whether to return to the initial set of ``components_``,
+            ``weights_``, and ``stretch_`` before running the optimization.
+            Optional. When set to False, sequential calls to fit() will use
+            the output of the previous
             fit() as their input.
         """
 

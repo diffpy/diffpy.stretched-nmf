@@ -44,6 +44,7 @@ Table of contents
    :maxdepth: 2
 
    getting-started
+   api/snmf_class
    release
    license
 
