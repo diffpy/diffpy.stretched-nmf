@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# diffpy.snmf documentation build configuration file, created by  # noqa: E501
+# diffpy.stretched-nmf documentation build configuration file, created by  # noqa: E501
 # sphinx-quickstart on Thu Jan 30 15:49:41 2014.
 #
 # This file is execfile()d with the current directory set to its
@@ -20,7 +20,7 @@ from pathlib import Path
 
 # Attempt to import the version dynamically from GitHub tag.
 try:
-    fullversion = version("diffpy.snmf")
+    fullversion = version("diffpy.stretched-nmf")
 except Exception:
     fullversion = "No version found. The correct version will appear in the released version."  # noqa: E501
 
@@ -68,7 +68,7 @@ source_suffix = [".rst", ".md"]
 master_doc = "index"
 
 # General information about the project.
-project = "diffpy.snmf"
+project = "diffpy.stretched-nmf"
 copyright = "%Y, The Trustees of Columbia University in the City of New York"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -122,7 +122,7 @@ exclude_patterns = ["build"]
 pygments_style = "sphinx"
 
 # A list of ignored prefixes for module index sorting.
-modindex_common_prefix = ["diffpy.snmf"]
+modindex_common_prefix = ["diffpy.stretched_nmf"]
 
 # Display all warnings for missing links.
 nitpicky = True
@@ -137,7 +137,7 @@ html_theme = "sphinx_rtd_theme"
 html_context = {
     "display_github": True,
     "github_user": "diffpy",
-    "github_repo": "diffpy.snmf",
+    "github_repo": "diffpy.stretched-nmf",
     "github_version": "main",
     "conf_py_path": "/docs/source/",
 }
@@ -221,7 +221,7 @@ html_theme_options = {
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-basename = "diffpy.snmf".replace(" ", "").replace(".", "")
+basename = "diffpy.stretched-nmf".replace(" ", "").replace(".", "")
 htmlhelp_basename = basename + "doc"
 
 
@@ -242,8 +242,8 @@ latex_elements = {
 latex_documents = [
     (
         "index",
-        "diffpy.snmf.tex",
-        "diffpy.snmf Documentation",
+        "diffpy.stretched-nmf.tex",
+        "diffpy.stretched-nmf Documentation",
         ab_authors,
         "manual",
     ),
@@ -277,8 +277,8 @@ latex_documents = [
 man_pages = [
     (
         "index",
-        "diffpy.snmf",
-        "diffpy.snmf Documentation",
+        "diffpy.stretched-nmf",
+        "diffpy.stretched-nmf Documentation",
         ab_authors,
         1,
     )
@@ -296,10 +296,10 @@ man_pages = [
 texinfo_documents = [
     (
         "index",
-        "diffpy.snmf",
-        "diffpy.snmf Documentation",
+        "diffpy.stretched-nmf",
+        "diffpy.stretched-nmf Documentation",
         ab_authors,
-        "diffpy.snmf",
+        "diffpy.stretched-nmf",
         "One line description of project.",
         "Miscellaneous",
     ),

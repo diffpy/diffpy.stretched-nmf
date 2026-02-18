@@ -7,6 +7,6 @@ jobs:
   docs:
     uses: scikit-package/release-scripts/.github/workflows/_publish-docs-on-release.yml@v0
     with:
-      project: diffpy.snmf
+      project: diffpy.stretched-nmf
       c_extension: false
       headless: false

@@ -14,7 +14,7 @@ jobs:
   matrix-coverage:
     uses: scikit-package/release-scripts/.github/workflows/_matrix-and-codecov-on-merge-to-main.yml@v0
     with:
-      project: diffpy.snmf
+      project: diffpy.stretched-nmf
       c_extension: false
       headless: false
     secrets:
