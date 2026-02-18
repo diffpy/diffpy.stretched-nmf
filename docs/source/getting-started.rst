@@ -3,7 +3,7 @@
 Getting started
 ===============
 
-``diffpy.snmf`` implements the stretched NMF algorithm for factorizing signal
+``diffpy.stretched-nmf`` implements the stretched NMF algorithm for factorizing signal
 sets while accounting for uniform stretching along the independent axis.
 
 Installation
@@ -14,14 +14,14 @@ The preferred method is conda:
 .. code-block:: bash
 
    conda config --add channels conda-forge
-   conda create -n diffpy.snmf_env diffpy.snmf
-   conda activate diffpy.snmf_env
+   conda create -n diffpy.stretched-nmf_env diffpy.stretched-nmf
+   conda activate diffpy.stretched-nmf_env
 
 Alternatively, install from PyPI with pip:
 
 .. code-block:: bash
 
-   pip install diffpy.snmf
+   pip install diffpy.stretched-nmf
 
 For source installs (after cloning the repo):
 
@@ -36,8 +36,8 @@ Verify the CLI and Python import:
 
 .. code-block:: bash
 
-   diffpy.snmf --version
-   python -c "import diffpy.snmf; print(diffpy.snmf.__version__)"
+   diffpy-stretched-nmf --version
+   python -c "import diffpy.stretched_nmf; print(diffpy.stretched_nmf.__version__)"
 
 Basic usage
 -----------
@@ -49,7 +49,7 @@ or ``init_weights``.
 .. code-block:: python
 
    import numpy as np
-   from diffpy.snmf.snmf_class import SNMFOptimizer
+   from diffpy.stretched_nmf.snmf_class import SNMFOptimizer
 
    rng = np.random.default_rng(0)
    # Example data: 200 points across 8 signals

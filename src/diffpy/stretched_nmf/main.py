@@ -1,6 +1,6 @@
 import numpy as np
 
-from diffpy.snmf.snmf_class import SNMFOptimizer
+from diffpy.stretched_nmf.snmf_class import SNMFOptimizer
 
 # Example input files (not provided)
 init_components_file = np.loadtxt("inputs/init_components.txt", dtype=float)

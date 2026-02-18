@@ -92,7 +92,7 @@ This package also provides command-line utilities. To check the software has bee
 
 You can also type the following command to verify the installation. ::
 
-        python -c "import diffpy.snmf; print(diffpy.snmf.__version__)"
+        python -c "import diffpy.stretched_nmf; print(diffpy.stretched_nmf.__version__)"
 
 
 To view the basic usage and available commands, type ::

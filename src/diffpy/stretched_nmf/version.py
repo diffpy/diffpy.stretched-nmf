@@ -7,17 +7,20 @@
 # File coded by: Simon Billinge, John Halloran, Billinge Group members.
 #
 # See GitHub contributions for a more detailed list of contributors.
-# https://github.com/diffpy/diffpy.snmf/graphs/contributors
+# https://github.com/diffpy/diffpy.stretched-nmf/graphs/contributors  # noqa: E501
 #
 # See LICENSE.rst for license information.
 #
 ##############################################################################
-"""A python package implementing the stretched NMF algorithm."""
+"""Definition of __version__."""
 
-# package version
-from diffpy.snmf.version import __version__  # noqa
+#  We do not use the other three variables, but can be added back if needed.
+#  __all__ = ["__date__", "__git_commit__", "__timestamp__", "__version__"]
 
-# silence the pyflakes syntax checker
-assert __version__ or True
+# obtain version information
+from importlib.metadata import PackageNotFoundError, version
 
-# End of file
+try:
+    __version__ = version("diffpy.stretched-nmf")
+except PackageNotFoundError:
+    __version__ = "unknown"

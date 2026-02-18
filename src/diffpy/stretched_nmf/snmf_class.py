@@ -3,12 +3,12 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.sparse import coo_matrix, diags
 
-from diffpy.snmf.plotter import SNMFPlotter
+from diffpy.stretched_nmf.plotter import SNMFPlotter
 
 
 class SNMFOptimizer:
-    """An implementation of stretched NMF (sNMF), including sparse
-    stretched NMF.
+    """An implementation of stretched NMF, including sparse stretched
+    NMF.
 
     Instantiating the SNMFOptimizer class prepares initial guesses and sets up
     the optimization. It can then be run using fit(). The results matrices can

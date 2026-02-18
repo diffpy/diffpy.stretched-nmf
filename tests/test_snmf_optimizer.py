@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from diffpy.snmf.snmf_class import SNMFOptimizer
+from diffpy.stretched_nmf.snmf_class import SNMFOptimizer
 
 DATA_DIR = Path(__file__).parent / "inputs/test_snmf_optimizer"
 
