@@ -211,7 +211,7 @@ class SNMFOptimizer:
             fit() as their input.
         """
         self.converged_ = False
-        
+
         if reset:
             self.components_ = self.init_components.copy()
             self.weights_ = self.init_weights.copy()
