@@ -210,7 +210,8 @@ class SNMFOptimizer:
             the output of the previous
             fit() as their input.
         """
-
+        self.converged_ = False
+        
         if reset:
             self.components_ = self.init_components.copy()
             self.weights_ = self.init_weights.copy()
@@ -294,6 +295,7 @@ class SNMFOptimizer:
                 self.objective_difference < self.objective_function * self.tol
                 and outiter >= self.min_iter
             ):
+                self.converged_ = True
                 break
 
         self.normalize_results()
