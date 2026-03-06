@@ -252,11 +252,12 @@ class SNMFOptimizer:
         sparsity_term = self.eta * np.sum(
             np.sqrt(self.components_)
         )  # Square root penalty
+        obj_diff = (
+            self.objective_function - regularization_term - sparsity_term
+        )
         print(
             f"Start, Objective function: {self.objective_function:.5e}"
-            f", Obj - reg/sparse: {self.objective_function
-                                   - regularization_term
-                                   - sparsity_term:.5e}"
+            f", Obj - reg/sparse: {obj_diff:.5e}"
         )
 
         # Main optimization loop
@@ -275,11 +276,12 @@ class SNMFOptimizer:
             sparsity_term = self.eta * np.sum(
                 np.sqrt(self.components_)
             )  # Square root penalty
+            obj_diff = (
+                self.objective_function - regularization_term - sparsity_term
+            )
             print(
                 f"Obj fun: {self.objective_function:.5e}, "
-                f"Obj - reg/sparse: {self.objective_function
-                                     - regularization_term
-                                     - sparsity_term:.5e}, "
+                f", Obj - reg/sparse: {obj_diff:.5e}"
                 f"Iter: {self.outiter}"
             )
 
