@@ -7,4 +7,4 @@ Contributors
 ------------
 
 For a list of contributors, visit
-https://github.com/diffpy/diffpy.snmf/graphs/contributors
+https://github.com/diffpy/diffpy.stretched-nmf/graphs/contributors

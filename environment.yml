@@ -1,4 +1,4 @@
-name: diffpy.snmf
+name: diffpy.stretched-nmf
 channels:
   - conda-forge
 dependencies:
