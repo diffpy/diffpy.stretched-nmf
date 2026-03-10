@@ -5,18 +5,18 @@ import numpy as np
 from diffpy.stretched_nmf.snmf_class import SNMFOptimizer
 
 # Input data
-DATA_DIR = Path(__file__).resolve().parent / "data/XRD_MgMnO_YCl_real"
+DATA_DIR = Path(__file__).resolve().parent / "data/XRD-MgMnO-YCl-real"
 source_matrix_file = np.loadtxt(
-    DATA_DIR / "source_matrix.txt", dtype=float, skiprows=4
+    DATA_DIR / "source-matrix.txt", dtype=float, skiprows=4
 )
 
 # Optional starting initialization
 # Without it, would need to provide n_components = 2 to get these results
 init_components_file = np.loadtxt(
-    DATA_DIR / "init_components.txt", dtype=float
+    DATA_DIR / "init-components.txt", dtype=float
 )
-init_stretch_file = np.loadtxt(DATA_DIR / "init_stretch.txt", dtype=float)
-init_weights_file = np.loadtxt(DATA_DIR / "init_weights.txt", dtype=float)
+init_stretch_file = np.loadtxt(DATA_DIR / "init-stretch.txt", dtype=float)
+init_weights_file = np.loadtxt(DATA_DIR / "init-weights.txt", dtype=float)
 
 my_model = SNMFOptimizer(
     show_plots=True,
