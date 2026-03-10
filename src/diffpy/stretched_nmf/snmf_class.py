@@ -61,10 +61,6 @@ class SNMFOptimizer:
     random_state : int
         The seed for the initial guesses at the matrices (stretch, components,
         and weights) created by the decomposition.
-    num_updates : int
-        The total number of times that any of (stretch, components,
-        and weights) have had their values changed. If not terminated by other
-        means, this value is used to stop when reaching max_iter.
     objective_difference : float
         The change in the objective function value since the last update. A
         negative value means that the result improved.
@@ -128,7 +124,6 @@ class SNMFOptimizer:
         self.min_iter = min_iter
         # Capture matrix dimensions
         self.signal_length, self.n_signals = source_matrix.shape
-        self.num_updates = 0
         self._rng = np.random.default_rng(random_state)
         self.plotter = SNMFPlotter() if show_plots else None
 
