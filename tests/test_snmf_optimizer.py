@@ -35,20 +35,23 @@ def inputs():
 @pytest.mark.slow
 def test_final_objective_below_threshold(inputs):
     model = SNMFOptimizer(
-        source_matrix=inputs["source"],
-        init_weights=inputs["weights"],
-        init_components=inputs["components"],
-        init_stretch=inputs["stretch"],
         show_plots=False,
         random_state=1,
         min_iter=5,
         max_iter=5,
+        rho=1e12,
+        eta=610,
     )
-    model.fit(rho=1e12, eta=610)
+    model.fit(
+        source_matrix=inputs["source"],
+        init_weights=inputs["weights"],
+        init_components=inputs["components"],
+        init_stretch=inputs["stretch"],
+    )
 
     # Basic sanity check and the actual assertion
-    assert np.isfinite(model.objective_function)
-    assert model.objective_function < 5e6
+    assert np.isfinite(model.objective_function_)
+    assert model.objective_function_ < 5e6
 
 
 @pytest.mark.parametrize(

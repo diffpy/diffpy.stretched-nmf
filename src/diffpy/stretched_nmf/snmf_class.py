@@ -10,10 +10,8 @@ class SNMFOptimizer:
     """An implementation of stretched NMF, including sparse stretched
     NMF.
 
-    Instantiating the SNMFOptimizer class prepares initial guesses and sets up
-    the optimization. It can then be run using fit(). The results matrices can
-    be accessed as instance attributes of the
-    class (``components_``, ``weights_``, and ``stretch_``).
+    Instantiate the estimator with hyperparameters, then call ``fit`` to
+    optimize model factors.
 
     For more information on sNMF, please reference:
     Gu, R., Rakita, Y., Lan, L. et al.
@@ -22,9 +20,6 @@ class SNMFOptimizer:
 
     Attributes
     ----------
-    source_matrix : numpy.ndarray
-        The original, unmodified data to be decomposed and later,
-        compared against. Shape is (length_of_signal, number_of_signals).
     stretch_ : numpy.ndarray
         The best guess (or while running, the current guess) for the stretching
         factor matrix.
@@ -56,61 +51,61 @@ class SNMFOptimizer:
         in the objective function to allow without terminating the
         optimization.
     n_components : int
-        The number of components to extract from source_matrix. Must be
-        provided when and only when init_weights is not provided.
+        Preferred number of components when ``init_weights`` is not provided
+        to ``fit``.
     random_state : int
         The seed for the initial guesses at the matrices (stretch, components,
         and weights) created by the decomposition.
-    objective_difference : float
+    n_components_ : int
+        Learned number of components from initialization.
+    signal_length_ : int
+        Number of rows in the fitted source matrix.
+    n_signals_ : int
+        Number of columns in the fitted source matrix.
+    objective_function_ : float
+        Current objective value from the most recent update.
+    objective_difference_ : float
         The change in the objective function value since the last update. A
-        negative value means that the result improved.
+        positive value means that the result improved.
+    n_iter_ : int
+        Number of outer iterations completed in ``fit``.
     """
 
     def __init__(
         self,
-        source_matrix,
-        init_weights=None,
-        init_components=None,
-        init_stretch=None,
+        n_components=None,
         max_iter=500,
         min_iter=20,
         tol=5e-7,
-        n_components=None,
+        rho=0,
+        eta=0,
         random_state=None,
         show_plots=False,
     ):
-        """Initialize an instance of sNMF.
+        """Initialize an instance of sNMF with estimator
+        hyperparameters.
 
         Parameters
         ----------
-        source_matrix : numpy.ndarray
-            The data to be decomposed. Shape is (length_of_signal,
-            number_of_conditions).
-        init_weights : numpy.ndarray
-            The initial guesses for the component weights at each stretching
-            condition. Shape is (number_of_components, number_of_signals).
-            Optional. Must provide exactly one of this or n_components.
-        init_components : numpy.ndarray
-            The initial guesses for the intensities of each component per
-            row/sample/angle. Shape is (length_of_signal,
-            number_of_components).
-            Optional.
-        init_stretch : numpy.ndarray
-            The initial guesses for the stretching factor for each component,
-            at each condition (for each signal). Shape is
-            (number_of_components, number_of_signals).
-            Optional.
+        n_components : int, optional
+            The number of components to extract when ``init_weights`` is not
+            provided to ``fit``.
         max_iter : int
             The maximum number of times to update each of A, X, and Y before
             stopping the optimization. Optional.
+        min_iter : int
+            The minimum number of outer-loop iterations before convergence
+            checks can stop optimization. Optional.
         tol : float
             The convergence threshold. This is the minimum fractional
             improvement in the objective function to allow without terminating
             the optimization. Note that a minimum of 20 updates are run before
             this parameter is checked. Optional.
-        n_components : int
-            The number of components to extract from source_matrix. Must be
-            provided when and only when Y0 is not provided. Optional.
+        rho : float
+            Stretching regularization hyperparameter. Zero corresponds to no
+            stretching.
+        eta : float
+            Sparsity regularization hyperparameter.
         random_state : int
             The seed for the initial guesses at the matrices (A, X, and Y)
             created by the decomposition. Optional.
@@ -118,122 +113,200 @@ class SNMFOptimizer:
             Enables plotting at each step of the decomposition. Optional.
         """
 
-        self.source_matrix = source_matrix
-        self.tol = tol
+        if n_components is not None and n_components < 1:
+            raise ValueError("n_components must be a positive integer.")
+
+        self.n_components = n_components
         self.max_iter = max_iter
         self.min_iter = min_iter
-        # Capture matrix dimensions
-        self.signal_length, self.n_signals = source_matrix.shape
-        self._rng = np.random.default_rng(random_state)
-        self.plotter = SNMFPlotter() if show_plots else None
+        self.tol = tol
+        self.rho = rho
+        self.eta = eta
+        self.random_state = random_state
+        self.show_plots = show_plots
 
-        # Enforce exclusive specification of n_components or init_weights
-        if (n_components is None and init_weights is None) or (
-            n_components is not None and init_weights is not None
-        ):
+        self._rng = np.random.default_rng(self.random_state)
+        self._plotter = SNMFPlotter() if self.show_plots else None
+
+    def _initialize_factors(
+        self,
+        source_matrix,
+        init_weights=None,
+        init_components=None,
+        init_stretch=None,
+    ):
+        self._rng = np.random.default_rng(self.random_state)
+        self.signal_length_, self.n_signals_ = source_matrix.shape
+
+        if init_weights is None and self.n_components is None:
             raise ValueError(
-                "Conflicting source for n_components. Must provide either "
-                "init_weights or n_components directly, but not both."
+                "n_components must be provided when init_weights is not set."
             )
 
-        # Initialize weights and determine number of components
         if init_weights is None:
-            self.n_components = n_components
-            self.weights_ = self._rng.beta(
-                a=2.0, b=2.0, size=(self.n_components, self.n_signals)
+            n_components = self.n_components
+            weights = self._rng.beta(
+                a=2.0,
+                b=2.0,
+                size=(n_components, self.n_signals_),
             )
         else:
-            self.n_components = init_weights.shape[0]
-            self.weights_ = init_weights
+            weights = np.asarray(init_weights, dtype=float)
+            n_components = weights.shape[0]
+            if (
+                self.n_components is not None
+                and self.n_components != n_components
+            ):
+                raise ValueError(
+                    "init_weights has a different number of components than "
+                    "n_components."
+                )
 
-        # Initialize stretching matrix if not provided
         if init_stretch is None:
-            self.stretch_ = np.ones(
-                (self.n_components, self.n_signals)
+            stretch = np.ones(
+                (n_components, self.n_signals_)
             ) + self._rng.normal(
-                0, 1e-3, size=(self.n_components, self.n_signals)
+                0,
+                1e-3,
+                size=(n_components, self.n_signals_),
             )
         else:
-            self.stretch_ = init_stretch
+            stretch = np.asarray(init_stretch, dtype=float)
 
-        # Initialize component matrix if not provided
         if init_components is None:
-            self.components_ = self._rng.random(
-                (self.signal_length, self.n_components)
-            )
+            components = self._rng.random((self.signal_length_, n_components))
         else:
-            self.components_ = init_components
+            components = np.asarray(init_components, dtype=float)
 
-        # Enforce non-negativity in our initial guesses
-        self.components_ = np.maximum(0, self.components_)
-        self.weights_ = np.maximum(0, self.weights_)
+        expected_weights_shape = (n_components, self.n_signals_)
+        expected_stretch_shape = (n_components, self.n_signals_)
+        expected_components_shape = (self.signal_length_, n_components)
 
-        # Store the initial components, weights, and stretch
-        self.init_components = self.components_.copy()
-        self.init_weights = self.weights_.copy()
-        self.init_stretch = self.stretch_.copy()
+        if weights.shape != expected_weights_shape:
+            raise ValueError(
+                "init_weights must have shape "
+                f"{expected_weights_shape}, got {weights.shape}."
+            )
+        if stretch.shape != expected_stretch_shape:
+            raise ValueError(
+                "init_stretch must have shape "
+                f"{expected_stretch_shape}, got {stretch.shape}."
+            )
+        if components.shape != expected_components_shape:
+            raise ValueError(
+                "init_components must have shape "
+                f"{expected_components_shape}, got {components.shape}."
+            )
+
+        self.n_components_ = n_components
+        self.weights_ = np.maximum(0, weights)
+        self.stretch_ = stretch
+        self.components_ = np.maximum(0, components)
+
+        self._init_components = self.components_.copy()
+        self._init_weights = self.weights_.copy()
+        self._init_stretch = self.stretch_.copy()
 
         # Second-order spline: Tridiagonal (-2 on diags, 1 on sub/superdiags)
         self._spline_smooth_operator = 0.25 * diags(
             [1, -2, 1],
             offsets=[0, 1, 2],
-            shape=(self.n_signals - 2, self.n_signals),
+            shape=(self.n_signals_ - 2, self.n_signals_),
         )
 
-    def fit(self, rho=0, eta=0, reset=True):
-        """Run the sNMF optimization with the given parameters, using
-        the setup from __init__.
+    def fit(
+        self,
+        source_matrix,
+        init_weights=None,
+        init_components=None,
+        init_stretch=None,
+        reset=True,
+    ):
+        """Run the sNMF optimization on ``source_matrix``.
 
         Parameters
         ----------
-        rho : float
-            The stretching factor that influences the decomposition. Optional.
-            Zero
-            corresponds to no stretching present. Relatively insensitive and
-            typically adjusted in powers of 10.
-        eta : int
-            The sparsity factor that influences the decomposition. Optional.
-            Should be
-            set to zero for non-sparse data such as PDF. Can be used to
-            improve results for sparse data such as XRD, but due to
-            instability, should be used only after first selecting the best
-            value for rho. Suggested adjustment is by powers of 2.
+        source_matrix : ndarray of shape (signal_length, n_signals)
+            Source data matrix to decompose.
+        init_weights : ndarray, optional
+            Optional initial weights matrix of shape
+            ``(n_components, n_signals)``.
+        init_components : ndarray, optional
+            Optional initial components matrix of shape
+            ``(signal_length, n_components)``.
+        init_stretch : ndarray, optional
+            Optional initial stretch matrix of shape
+            ``(n_components, n_signals)``.
         reset : bool
-            Whether to return to the initial set of ``components_``,
-            ``weights_``, and ``stretch_`` before running the optimization.
-            Optional. When set to False, sequential calls to fit() will use
-            the output of the previous
-            fit() as their input.
+            Whether to reinitialize model factors before fitting. If ``False``,
+            the previous factor matrices are reused.
         """
+        source_matrix = np.asarray(source_matrix, dtype=float)
+        if source_matrix.ndim != 2:
+            raise ValueError("source_matrix must be a 2D array.")
+
+        self._source_matrix = source_matrix
 
         if reset:
-            self.components_ = self.init_components.copy()
-            self.weights_ = self.init_weights.copy()
-            self.stretch_ = self.init_stretch.copy()
-
-        self.rho = rho
-        self.eta = eta
+            self._initialize_factors(
+                source_matrix=source_matrix,
+                init_weights=init_weights,
+                init_components=init_components,
+                init_stretch=init_stretch,
+            )
+        else:
+            if any(
+                v is not None
+                for v in (init_weights, init_components, init_stretch)
+            ):
+                raise ValueError(
+                    "init_weights, init_components, and init_stretch can only "
+                    "be provided when reset=True."
+                )
+            if not all(
+                hasattr(self, name)
+                for name in (
+                    "components_",
+                    "weights_",
+                    "stretch_",
+                    "n_components_",
+                    "signal_length_",
+                    "n_signals_",
+                    "_spline_smooth_operator",
+                )
+            ):
+                raise ValueError(
+                    "Cannot warm-start before initialization. Call fit with "
+                    "reset=True first."
+                )
+            expected_shape = (self.signal_length_, self.n_signals_)
+            if source_matrix.shape != expected_shape:
+                raise ValueError(
+                    "Warm-start requires source_matrix to keep the same shape "
+                    f"{expected_shape}, got {source_matrix.shape}."
+                )
 
         # Set stretch matrix to 1 if no stretching present
         if self.rho == 0:
             self.stretch_ = np.ones_like(self.stretch_)
 
         # Set up residual matrix, objective function, and history
-        self.residuals = self.get_residual_matrix()
-        self.objective_function = self.get_objective_function()
-        self.best_objective = self.objective_function
-        self.best_matrices = [
+        self.residuals_ = self._get_residual_matrix()
+        self.objective_function_ = self._get_objective_function()
+        self.best_objective_ = self.objective_function_
+        self.best_matrices_ = [
             self.components_.copy(),
             self.weights_.copy(),
             self.stretch_.copy(),
         ]
-        self.objective_difference = None
-        self._objective_history = [self.objective_function]
+        self.objective_difference_ = None
+        self._objective_history = [self.objective_function_]
 
-        # Set up tracking variables for update_components()
+        # Set up tracking variables for _update_components()
         self._prev_components = None
         self._grad_components = np.zeros_like(self.components_)
         self._prev_grad_components = np.zeros_like(self.components_)
+        self.n_iter_ = 0
 
         regularization_term = (
             0.5
@@ -246,17 +319,19 @@ class SNMFOptimizer:
         sparsity_term = self.eta * np.sum(
             np.sqrt(self.components_)
         )  # Square root penalty
+        objective_without_penalty = (
+            self.objective_function_ - regularization_term - sparsity_term
+        )
         print(
-            f"Start, Objective function: {self.objective_function:.5e}"
-            f", Obj - reg/sparse: {self.objective_function
-                                   - regularization_term
-                                   - sparsity_term:.5e}"
+            f"Start, Objective function: {self.objective_function_:.5e}"
+            f", Obj - reg/sparse: {objective_without_penalty:.5e}"
         )
 
         # Main optimization loop
         for outiter in range(self.max_iter):
-            self.outiter = outiter
-            self.outer_loop()
+            self._outer_iter = outiter
+            self._outer_loop()
+            self.n_iter_ = outiter + 1
             # Print diagnostics
             regularization_term = (
                 0.5
@@ -269,37 +344,41 @@ class SNMFOptimizer:
             sparsity_term = self.eta * np.sum(
                 np.sqrt(self.components_)
             )  # Square root penalty
+            objective_without_penalty = (
+                self.objective_function_ - regularization_term - sparsity_term
+            )
             print(
-                f"Obj fun: {self.objective_function:.5e}, "
-                f"Obj - reg/sparse: {self.objective_function
-                                     - regularization_term
-                                     - sparsity_term:.5e}, "
-                f"Iter: {self.outiter}"
+                f"Obj fun: {self.objective_function_:.5e}, "
+                f"Obj - reg/sparse: {objective_without_penalty:.5e}, "
+                f"Iter: {self._outer_iter}"
             )
 
             # Convergence check: Stop if diffun is small
             # and at least min_iter iterations have passed
             print(
                 "Checking if ",
-                self.objective_difference,
+                self.objective_difference_,
                 " < ",
-                self.objective_function * self.tol,
+                self.objective_function_ * self.tol,
             )
             if (
-                self.objective_difference < self.objective_function * self.tol
+                self.objective_difference_ is not None
+                and self.objective_difference_
+                < self.objective_function_ * self.tol
                 and outiter >= self.min_iter
             ):
                 break
 
-        self.normalize_results()
+        self._normalize_results()
+        self.reconstruction_err_ = np.linalg.norm(self.residuals_, "fro")
 
         return self
 
-    def normalize_results(self):
+    def _normalize_results(self):
         # Select our best results for normalization
-        self.components_ = self.best_matrices[0]
-        self.weights_ = self.best_matrices[1]
-        self.stretch_ = self.best_matrices[2]
+        self.components_ = self.best_matrices_[0]
+        self.weights_ = self.best_matrices_[1]
+        self.stretch_ = self.best_matrices_[2]
 
         # Normalize weights/stretch first
         weights_row_max = np.max(self.weights_, axis=1, keepdims=True)
@@ -314,133 +393,139 @@ class SNMFOptimizer:
         self._prev_grad_components = np.zeros_like(
             self.components_
         )  # Previous gradient of X (zeros for now)
-        self.residuals = self.get_residual_matrix()
-        self.objective_function = self.get_objective_function()
-        self.objective_difference = None
-        self._objective_history = [self.objective_function]
-        self.outiter = 0
-        self.iter = 0
+        self.residuals_ = self._get_residual_matrix()
+        self.objective_function_ = self._get_objective_function()
+        self.objective_difference_ = None
+        self._objective_history = [self.objective_function_]
+        self._outer_iter = 0
+        self._inner_iter = 0
         for outiter in range(self.max_iter):
-            if iter == 1:
-                self.iter = 1  # So step size can adapt without an inner loop
-            self.update_components()
-            self.residuals = self.get_residual_matrix()
-            self.objective_function = self.get_objective_function()
+            self._outer_iter = outiter
+            if outiter == 1:
+                self._inner_iter = (
+                    1  # So step size can adapt without an inner loop
+                )
+            self._update_components()
+            self.residuals_ = self._get_residual_matrix()
+            self.objective_function_ = self._get_objective_function()
             print(
                 f"Objective function after normalize_components: "
-                f"{self.objective_function:.5e}"
+                f"{self.objective_function_:.5e}"
             )
-            self._objective_history.append(self.objective_function)
-            self.objective_difference = (
+            self._objective_history.append(self.objective_function_)
+            self.objective_difference_ = (
                 self._objective_history[-2] - self._objective_history[-1]
             )
-            if self.plotter is not None:
-                self.plotter.update(
+            if self._plotter is not None:
+                self._plotter.update(
                     components=self.components_,
                     weights=self.weights_,
                     stretch=self.stretch_,
                     update_tag="normalize components",
                 )
             if (
-                self.objective_difference < self.objective_function * self.tol
+                self.objective_difference_
+                < self.objective_function_ * self.tol
                 and outiter >= 7
             ):
                 break
 
-    def outer_loop(self):
-        for iter in range(4):
-            self.iter = iter
+    def _outer_loop(self):
+        for inner_iter in range(4):
+            self._inner_iter = inner_iter
             self._prev_grad_components = self._grad_components.copy()
-            self.update_components()
-            self.residuals = self.get_residual_matrix()
-            self.objective_function = self.get_objective_function()
+            self._update_components()
+            self.residuals_ = self._get_residual_matrix()
+            self.objective_function_ = self._get_objective_function()
             print(
-                f"Objective function after update_components: "
-                f"{self.objective_function:.5e}"
+                f"Objective function after _update_components: "
+                f"{self.objective_function_:.5e}"
             )
-            self._objective_history.append(self.objective_function)
-            self.objective_difference = (
+            self._objective_history.append(self.objective_function_)
+            self.objective_difference_ = (
                 self._objective_history[-2] - self._objective_history[-1]
             )
-            if self.objective_function < self.best_objective:
-                self.best_objective = self.objective_function
-                self.best_matrices = [
+            if self.objective_function_ < self.best_objective_:
+                self.best_objective_ = self.objective_function_
+                self.best_matrices_ = [
                     self.components_.copy(),
                     self.weights_.copy(),
                     self.stretch_.copy(),
                 ]
-            if self.plotter is not None:
-                self.plotter.update(
+            if self._plotter is not None:
+                self._plotter.update(
                     components=self.components_,
                     weights=self.weights_,
                     stretch=self.stretch_,
                     update_tag="components",
                 )
 
-            self.update_weights()
-            self.residuals = self.get_residual_matrix()
-            self.objective_function = self.get_objective_function()
+            self._update_weights()
+            self.residuals_ = self._get_residual_matrix()
+            self.objective_function_ = self._get_objective_function()
             print(
-                f"Objective function after update_weights: "
-                f"{self.objective_function:.5e}"
+                f"Objective function after _update_weights: "
+                f"{self.objective_function_:.5e}"
             )
-            self._objective_history.append(self.objective_function)
-            self.objective_difference = (
+            self._objective_history.append(self.objective_function_)
+            self.objective_difference_ = (
                 self._objective_history[-2] - self._objective_history[-1]
             )
-            if self.objective_function < self.best_objective:
-                self.best_objective = self.objective_function
-                self.best_matrices = [
+            if self.objective_function_ < self.best_objective_:
+                self.best_objective_ = self.objective_function_
+                self.best_matrices_ = [
                     self.components_.copy(),
                     self.weights_.copy(),
                     self.stretch_.copy(),
                 ]
-            if self.plotter is not None:
-                self.plotter.update(
+            if self._plotter is not None:
+                self._plotter.update(
                     components=self.components_,
                     weights=self.weights_,
                     stretch=self.stretch_,
                     update_tag="weights",
                 )
 
-            self.objective_difference = (
+            self.objective_difference_ = (
                 self._objective_history[-2] - self._objective_history[-1]
             )
             if (
-                self._objective_history[-3] - self.objective_function
-                < self.objective_difference * 1e-3
+                self._objective_history[-3] - self.objective_function_
+                < self.objective_difference_ * 1e-3
             ):
                 break
 
         # Skip updating stretch if no stretching factor
         if not self.rho == 0:
-            self.update_stretch()
-            self.residuals = self.get_residual_matrix()
-            self.objective_function = self.get_objective_function()
+            self._update_stretch()
+            self.residuals_ = self._get_residual_matrix()
+            self.objective_function_ = self._get_objective_function()
             print(
-                f"Objective function after update_stretch: "
-                f"{self.objective_function:.5e}"
+                f"Objective function after _update_stretch: "
+                f"{self.objective_function_:.5e}"
             )
-            self._objective_history.append(self.objective_function)
-            self.objective_difference = (
+            self._objective_history.append(self.objective_function_)
+            self.objective_difference_ = (
                 self._objective_history[-2] - self._objective_history[-1]
             )
-            if self.objective_function < self.best_objective:
-                self.best_objective = self.objective_function
-                self.best_matrices = [
+            if self.objective_function_ < self.best_objective_:
+                self.best_objective_ = self.objective_function_
+                self.best_matrices_ = [
                     self.components_.copy(),
                     self.weights_.copy(),
                     self.stretch_.copy(),
                 ]
-            if self.plotter is not None:
-                self.plotter.update(
+            if self._plotter is not None:
+                self._plotter.update(
                     components=self.components_,
                     weights=self.weights_,
                     stretch=self.stretch_,
                     update_tag="stretch",
                 )
 
-    def get_residual_matrix(self, components=None, weights=None, stretch=None):
+    def _get_residual_matrix(
+        self, components=None, weights=None, stretch=None
+    ):
         """Return the residuals (difference) between the source matrix
         and its reconstruction.
 
@@ -462,19 +547,21 @@ class SNMFOptimizer:
         if stretch is None:
             stretch = self.stretch_
 
-        reconstructed_matrix = reconstruct_matrix(components, weights, stretch)
-        residuals = reconstructed_matrix - self.source_matrix
+        reconstructed_matrix = _reconstruct_matrix(
+            components, weights, stretch
+        )
+        residuals = reconstructed_matrix - self._source_matrix
 
         return residuals
 
-    def get_objective_function(self, residuals=None, stretch=None):
+    def _get_objective_function(self, residuals=None, stretch=None):
         """Return the objective value, passing stored attributes or
         overrides to _compute_objective_function().
 
         Parameters
         ----------
         residuals : ndarray, optional
-            Residual matrix to use instead of self.residuals.
+            Residual matrix to use instead of self.residuals_.
         stretch : ndarray, optional
             Stretch matrix to use instead of self.stretch_.
 
@@ -485,14 +572,14 @@ class SNMFOptimizer:
         """
         return SNMFOptimizer._compute_objective_function(
             components=self.components_,
-            residuals=self.residuals if residuals is None else residuals,
+            residuals=self.residuals_ if residuals is None else residuals,
             stretch=self.stretch_ if stretch is None else stretch,
             rho=self.rho,
             eta=self.eta,
             spline_smooth_operator=self._spline_smooth_operator,
         )
 
-    def compute_stretched_components(
+    def _compute_stretched_components(
         self, components=None, weights=None, stretch=None
     ):
         """Interpolates each component along its sample axis according
@@ -587,7 +674,7 @@ class SNMFOptimizer:
             dd_weighted.reshape(signal_len, n_components * n_signals),
         )
 
-    def apply_transformation_matrix(
+    def _apply_transformation_matrix(
         self, stretch=None, weights=None, residuals=None
     ):
         """Computes the transformation matrix `stretch_transformed` for
@@ -599,40 +686,42 @@ class SNMFOptimizer:
         if weights is None:
             weights = self.weights_
         if residuals is None:
-            residuals = self.residuals
+            residuals = self.residuals_
 
         # Compute scaling matrix
         stretch_tiled = np.tile(
-            stretch.reshape(1, self.n_signals * self.n_components, order="F")
+            stretch.reshape(1, self.n_signals_ * self.n_components_, order="F")
             ** -1,
-            (self.signal_length, 1),
+            (self.signal_length_, 1),
         )
 
         # Compute indices
-        indices = np.arange(self.signal_length)[:, None] * stretch_tiled
+        indices = np.arange(self.signal_length_)[:, None] * stretch_tiled
 
         # Weighting coefficients
         weights_tiled = np.tile(
-            weights.reshape(1, self.n_signals * self.n_components, order="F"),
-            (self.signal_length, 1),
+            weights.reshape(
+                1, self.n_signals_ * self.n_components_, order="F"
+            ),
+            (self.signal_length_, 1),
         )
 
         # Compute floor indices
         floor_indices = np.floor(indices).astype(int)
-        floor_indices_1 = np.minimum(floor_indices + 1, self.signal_length)
-        floor_indices_2 = np.minimum(floor_indices_1 + 1, self.signal_length)
+        floor_indices_1 = np.minimum(floor_indices + 1, self.signal_length_)
+        floor_indices_2 = np.minimum(floor_indices_1 + 1, self.signal_length_)
 
         # Compute fractional part
         fractional_indices = indices - floor_indices
 
         # Expand row indices
         repm = np.tile(
-            np.arange(self.n_components),
-            (self.signal_length, self.n_signals),
+            np.arange(self.n_components_),
+            (self.signal_length_, self.n_signals_),
         )
 
         # Compute transformations
-        kron = np.kron(residuals, np.ones((1, self.n_components)))
+        kron = np.kron(residuals, np.ones((1, self.n_components_)))
         fractional_kron = kron * fractional_indices
         fractional_weights = (fractional_indices - 1) * weights_tiled
 
@@ -642,19 +731,19 @@ class SNMFOptimizer:
                 (-kron * fractional_weights).flatten(),
                 (floor_indices_1.flatten() - 1, repm.flatten()),
             ),
-            shape=(self.signal_length + 1, self.n_components),
+            shape=(self.signal_length_ + 1, self.n_components_),
         ).tocsc()
         x3 = coo_matrix(
             (
                 (fractional_kron * weights_tiled).flatten(),
                 (floor_indices_2.flatten() - 1, repm.flatten()),
             ),
-            shape=(self.signal_length + 1, self.n_components),
+            shape=(self.signal_length_ + 1, self.n_components_),
         ).tocsc()
 
         # Combine the last row into previous, then remove the last row
-        x2[self.signal_length - 1, :] += x2[self.signal_length, :]
-        x3[self.signal_length - 1, :] += x3[self.signal_length, :]
+        x2[self.signal_length_ - 1, :] += x2[self.signal_length_, :]
+        x3[self.signal_length_ - 1, :] += x3[self.signal_length_, :]
         x2 = x2[:-1, :]
         x3 = x3[:-1, :]
 
@@ -662,7 +751,7 @@ class SNMFOptimizer:
 
         return stretch_transformed
 
-    def solve_quadratic_program(self, t, m):
+    def _solve_quadratic_program(self, t, m):
         """
         Solves the quadratic program for updating y in stretched NMF:
 
@@ -678,7 +767,7 @@ class SNMFOptimizer:
         - y: (k,) optimal solution
         """
 
-        source_matrix_col = self.source_matrix[:, m]
+        source_matrix_col = self._source_matrix[:, m]
 
         # Compute q and d
         q = t.T @ t  # Gram matrix (k x k)
@@ -710,27 +799,28 @@ class SNMFOptimizer:
             y.value, 0
         )  # Ensure non-negative values in case of solver tolerance issues
 
-    def update_components(self):
+    def _update_components(self):
         """Updates `components` using gradient-based optimization with
         adaptive step size."""
         # Compute stretched components using the interpolation function
         stretched_components, _, _ = (
-            self.compute_stretched_components()
+            self._compute_stretched_components()
         )  # Discard the derivatives
         # Compute reshaped_stretched_components and component_residuals
         intermediate_reshaped = stretched_components.flatten(
             order="F"
         ).reshape(
-            (self.signal_length * self.n_signals, self.n_components), order="F"
+            (self.signal_length_ * self.n_signals_, self.n_components_),
+            order="F",
         )
         reshaped_stretched_components = intermediate_reshaped.sum(
             axis=1
-        ).reshape((self.signal_length, self.n_signals), order="F")
+        ).reshape((self.signal_length_, self.n_signals_), order="F")
         component_residuals = (
-            reshaped_stretched_components - self.source_matrix
+            reshaped_stretched_components - self._source_matrix
         )
         # Compute gradient
-        self._grad_components = self.apply_transformation_matrix(
+        self._grad_components = self._apply_transformation_matrix(
             residuals=component_residuals
         ).toarray()  # toarray equivalent of full, make non-sparse
 
@@ -739,7 +829,7 @@ class SNMFOptimizer:
             self.weights_.T @ self.weights_
         ).max() * np.max([self.stretch_.max(), 1 / self.stretch_.min()])
         # Compute adaptive step size `step_size`
-        if self.outiter == 0 and self.iter == 0:
+        if self._outer_iter == 0 and self._inner_iter == 0:
             step_size = initial_step_size
         else:
             num = np.sum(
@@ -763,7 +853,7 @@ class SNMFOptimizer:
             )
             # Solve x^3 + p*x + q = 0 for the largest real root
             self.components_ = np.square(
-                cubic_largest_real_root(
+                _cubic_largest_real_root(
                     -components_step, self.eta / (2 * step_size)
                 )
             )
@@ -778,8 +868,8 @@ class SNMFOptimizer:
 
             objective_improvement = self._objective_history[
                 -1
-            ] - self.get_objective_function(
-                residuals=self.get_residual_matrix()
+            ] - self._get_objective_function(
+                residuals=self._get_residual_matrix()
             )
 
             # Check if objective function improves
@@ -790,22 +880,22 @@ class SNMFOptimizer:
             if np.isinf(step_size):
                 break
 
-    def update_weights(self):
+    def _update_weights(self):
         """Updates weights by building the stretched component matrix
         `stretched_comps` with np.interp and solving a quadratic program
         for each signal."""
 
-        sample_indices = np.arange(self.signal_length)
-        for signal in range(self.n_signals):
+        sample_indices = np.arange(self.signal_length_)
+        for signal in range(self.n_signals_):
             # Stretch factors for this signal across components:
             this_stretch = self.stretch_[:, signal]
             # Build stretched_comps[:, k] by interpolating component at frac.
             # pos. index / this_stretch[comp]
             stretched_comps = np.empty(
-                (self.signal_length, self.n_components),
+                (self.signal_length_, self.n_components_),
                 dtype=self.components_.dtype,
             )
-            for comp in range(self.n_components):
+            for comp in range(self.n_components_):
                 pos = sample_indices / this_stretch[comp]
                 stretched_comps[:, comp] = np.interp(
                     pos,
@@ -816,34 +906,35 @@ class SNMFOptimizer:
                 )
 
             # Solve quadratic problem for a given signal and update its weight
-            new_weight = self.solve_quadratic_program(
+            new_weight = self._solve_quadratic_program(
                 t=stretched_comps, m=signal
             )
             self.weights_[:, signal] = new_weight
 
-    def regularize_function(self, stretch=None):
+    def _regularize_function(self, stretch=None):
         if stretch is None:
             stretch = self.stretch_
 
         stretched_components, d_stretch_comps, dd_stretch_comps = (
-            self.compute_stretched_components(stretch=stretch)
+            self._compute_stretched_components(stretch=stretch)
         )
         intermediate = stretched_components.flatten(order="F").reshape(
-            (self.signal_length * self.n_signals, self.n_components), order="F"
+            (self.signal_length_ * self.n_signals_, self.n_components_),
+            order="F",
         )
         residuals = (
             intermediate.sum(axis=1).reshape(
-                (self.signal_length, self.n_signals), order="F"
+                (self.signal_length_, self.n_signals_), order="F"
             )
-            - self.source_matrix
+            - self._source_matrix
         )
 
-        fun = self.get_objective_function(residuals, stretch)
+        fun = self._get_objective_function(residuals, stretch)
 
-        tiled_res = np.tile(residuals, (1, self.n_components))
+        tiled_res = np.tile(residuals, (1, self.n_components_))
         grad_flat = np.sum(d_stretch_comps * tiled_res, axis=0)
         gra = grad_flat.reshape(
-            (self.n_signals, self.n_components), order="F"
+            (self.n_signals_, self.n_components_), order="F"
         ).T
         gra += (
             self.rho
@@ -855,7 +946,7 @@ class SNMFOptimizer:
 
         return fun, gra
 
-    def update_stretch(self):
+    def _update_stretch(self):
         """Updates stretching matrix using constrained optimization
         (equivalent to fmincon in MATLAB)."""
 
@@ -868,7 +959,7 @@ class SNMFOptimizer:
             stretch_matrix = stretch_vec.reshape(
                 self.stretch_.shape
             )  # Reshape back to matrix form
-            fun, gra = self.regularize_function(stretch_matrix)
+            fun, gra = self._regularize_function(stretch_matrix)
             gra = gra.flatten()
             return fun, gra
 
@@ -950,7 +1041,7 @@ class SNMFOptimizer:
         return residual_term + regularization_term + sparsity_term
 
 
-def cubic_largest_real_root(p, q):
+def _cubic_largest_real_root(p, q):
     """Solves x^3 + p*x + q = 0 element-wise for matrices, returning the
     largest real root."""
     # Handle special case where q == 0
@@ -986,7 +1077,7 @@ def cubic_largest_real_root(p, q):
     return y
 
 
-def reconstruct_matrix(components, weights, stretch):
+def _reconstruct_matrix(components, weights, stretch):
     """Construct the approximation of the source matrix corresponding to
     the given components, weights, and stretch factors.
 

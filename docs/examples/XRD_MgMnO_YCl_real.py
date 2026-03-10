@@ -19,14 +19,17 @@ init_stretch_file = np.loadtxt(DATA_DIR / "init_stretch.txt", dtype=float)
 init_weights_file = np.loadtxt(DATA_DIR / "init_weights.txt", dtype=float)
 
 my_model = SNMFOptimizer(
+    show_plots=True,
+    rho=1e12,
+    eta=610,
+)
+# Experimentally found best fit parameters for this data
+my_model.fit(
     source_matrix=source_matrix_file,
     init_weights=init_weights_file,
     init_components=init_components_file,
     init_stretch=init_stretch_file,
-    show_plots=True,
 )
-# Experimentally found best fit parameters for this data
-my_model.fit(rho=1e12, eta=610)
 
 print("Done")
 np.savetxt(

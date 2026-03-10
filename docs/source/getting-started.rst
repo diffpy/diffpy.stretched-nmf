@@ -42,9 +42,10 @@ Verify the CLI and Python import:
 Basic usage
 -----------
 
-The main entry point is the ``SNMFOptimizer`` class. Provide a source matrix
-with shape ``(length_of_signal, number_of_signals)`` and either ``n_components``
-or ``init_weights``.
+The main entry point is the ``SNMFOptimizer`` class. Create an
+``SNMFOptimizer`` with hyperparameters, then pass the source matrix to
+``fit``. The source matrix shape is
+``(length_of_signal, number_of_signals)``.
 
 .. code-block:: python
 
@@ -55,16 +56,17 @@ or ``init_weights``.
    source_matrix = rng.random((300, 24))  # (signal_length, n_signals)
 
    snmf = SNMFOptimizer(
-       source_matrix=source_matrix,
        n_components=3,
        max_iter=400,
        min_iter=20,
        tol=5e-7,
+       rho=0,
+       eta=0,
        random_state=7,
        show_plots=False,
    )
 
-   snmf.fit(rho=0, eta=0, reset=True)
+   snmf.fit(source_matrix=source_matrix, reset=True)
 
    components = snmf.components_
    weights = snmf.weights_
