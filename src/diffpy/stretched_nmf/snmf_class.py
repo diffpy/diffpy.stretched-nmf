@@ -51,24 +51,24 @@ class SNMFOptimizer:
         in the objective function to allow without terminating the
         optimization.
     n_components : int
-        Preferred number of components when ``init_weights`` is not provided
-        to ``fit``.
+        The referred number of components when ``init_weights`` is not
+        provided to ``fit``.
     random_state : int
         The seed for the initial guesses at the matrices (stretch, components,
         and weights) created by the decomposition.
     n_components_ : int
-        Learned number of components from initialization.
+        The learned number of components from initialization.
     signal_length_ : int
-        Number of rows in the fitted source matrix.
+        The number of rows in the fitted source matrix.
     n_signals_ : int
-        Number of columns in the fitted source matrix.
+        The number of columns in the fitted source matrix.
     objective_function_ : float
         Current objective value from the most recent update.
     objective_difference_ : float
         The change in the objective function value since the last update. A
         positive value means that the result improved.
     n_iter_ : int
-        Number of outer iterations completed in ``fit``.
+        The number of outer iterations completed in ``fit``.
     """
 
     def __init__(
@@ -102,10 +102,11 @@ class SNMFOptimizer:
             the optimization. Note that a minimum of 20 updates are run before
             this parameter is checked. Optional.
         rho : float
-            Stretching regularization hyperparameter. Zero corresponds to no
-            stretching.
+            The stretching regularization hyperparameter. Zero corresponds to
+            no stretching.
         eta : float
-            Sparsity regularization hyperparameter.
+            The sparsity regularization hyperparameter. Turn off for non-sparse
+            data such as PDF.
         random_state : int
             The seed for the initial guesses at the matrices (A, X, and Y)
             created by the decomposition. Optional.
@@ -227,15 +228,15 @@ class SNMFOptimizer:
         Parameters
         ----------
         source_matrix : ndarray of shape (signal_length, n_signals)
-            Source data matrix to decompose.
+            The source data matrix to decompose.
         init_weights : ndarray, optional
-            Optional initial weights matrix of shape
+            The initial weights matrix of shape
             ``(n_components, n_signals)``.
         init_components : ndarray, optional
             Optional initial components matrix of shape
             ``(signal_length, n_components)``.
         init_stretch : ndarray, optional
-            Optional initial stretch matrix of shape
+            The initial stretch matrix of shape
             ``(n_components, n_signals)``.
         reset : bool
             Whether to reinitialize model factors before fitting. If ``False``,
@@ -352,6 +353,7 @@ class SNMFOptimizer:
                 f"Obj fun: {self.objective_function_:.5e}, "
                 f"Obj - reg/sparse: {objective_without_penalty:.5e}, "
                 f"Iter: {self._outer_iter}"
+            )
             obj_diff = (
                 self.objective_function - regularization_term - sparsity_term
             )
