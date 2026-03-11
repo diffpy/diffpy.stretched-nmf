@@ -11,7 +11,8 @@ class SNMFOptimizer:
     NMF.
 
     Instantiate the estimator with hyperparameters, then call ``fit`` to
-    optimize model factors.
+    optimize model factors. Trailing underscores indicate that an attribute
+    was determined during the fit process.
 
     For more information on sNMF, please reference:
     Gu, R., Rakita, Y., Lan, L. et al.
