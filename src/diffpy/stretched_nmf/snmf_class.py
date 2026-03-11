@@ -244,6 +244,7 @@ class SNMFOptimizer:
         source_matrix = np.asarray(source_matrix, dtype=float)
         if source_matrix.ndim != 2:
             raise ValueError("source_matrix must be a 2D array.")
+        self.converged_ = False
 
         self._source_matrix = source_matrix
 
@@ -351,6 +352,13 @@ class SNMFOptimizer:
                 f"Obj fun: {self.objective_function_:.5e}, "
                 f"Obj - reg/sparse: {objective_without_penalty:.5e}, "
                 f"Iter: {self._outer_iter}"
+            obj_diff = (
+                self.objective_function - regularization_term - sparsity_term
+            )
+            print(
+                f"Obj fun: {self.objective_function:.5e}, "
+                f", Obj - reg/sparse: {obj_diff:.5e}"
+                f"Iter: {self.outiter}"
             )
 
             # Convergence check: Stop if diffun is small
@@ -367,6 +375,7 @@ class SNMFOptimizer:
                 < self.objective_function_ * self.tol
                 and outiter >= self.min_iter
             ):
+                self.converged_ = True
                 break
 
         self._normalize_results()
