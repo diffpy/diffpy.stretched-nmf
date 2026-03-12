@@ -17,5 +17,6 @@ jobs:
       project: diffpy.stretched-nmf
       c_extension: false
       headless: false
+      release_branch: main
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
