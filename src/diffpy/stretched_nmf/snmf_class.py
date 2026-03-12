@@ -349,10 +349,6 @@ class SNMFOptimizer:
             self.update_components()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            # print(
-            #     f"Objective function after normalize_components: "
-            #     f"{self.objective_function:.5e}"
-            # )
             self._objective_history.append(self.objective_function)
             self.objective_log.append(
                 {
@@ -393,10 +389,6 @@ class SNMFOptimizer:
                     "timestamp": time.time(),
                 }
             )
-            # print(
-            #     f"Objective function after update_components: "
-            #     f"{self.objective_function:.5e}"
-            # )
             self._objective_history.append(self.objective_function)
             self.objective_difference = (
                 self._objective_history[-2] - self._objective_history[-1]
@@ -419,10 +411,6 @@ class SNMFOptimizer:
             self.update_weights()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            # print(
-            #     f"Objective function after update_weights: "
-            #     f"{self.objective_function:.5e}"
-            # )
             self._objective_history.append(self.objective_function)
             self.objective_log.append(
                 {
@@ -464,10 +452,6 @@ class SNMFOptimizer:
             self.update_stretch()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            # print(
-            #     f"Objective function after update_stretch: "
-            #     f"{self.objective_function:.5e}"
-            # )
             self._objective_history.append(self.objective_function)
             self.objective_log.append(
                 {
