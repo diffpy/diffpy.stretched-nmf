@@ -239,10 +239,10 @@ class SNMFOptimizer:
             self.stretch_.copy(),
         ]
         self.objective_difference = None
-        self._objective_history = [self.objective_function]
         self.objective_log = [
             {
                 "step": "start",
+                "iteration": 0,
                 "objective": self.objective_function,
                 "timestamp": time.time(),
             }
@@ -340,7 +340,6 @@ class SNMFOptimizer:
         self.residuals = self.get_residual_matrix()
         self.objective_function = self.get_objective_function()
         self.objective_difference = None
-        self._objective_history = [self.objective_function]
         self.outiter = 0
         self.iter = 0
         for outiter in range(self.max_iter):
@@ -349,16 +348,17 @@ class SNMFOptimizer:
             self.update_components()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            self._objective_history.append(self.objective_function)
             self.objective_log.append(
                 {
                     "step": "c_norm",
+                    "iteration": outiter,
                     "objective": self.objective_function,
                     "timestamp": time.time(),
                 }
             )
             self.objective_difference = (
-                self._objective_history[-2] - self._objective_history[-1]
+                self.objective_log[-2]["objective"]
+                - self.objective_log[-1]["objective"]
             )
             if self.plotter is not None:
                 self.plotter.update(
@@ -385,13 +385,14 @@ class SNMFOptimizer:
             self.objective_log.append(
                 {
                     "step": "c",
+                    "iteration": self.outiter,
                     "objective": self.objective_function,
                     "timestamp": time.time(),
                 }
             )
-            self._objective_history.append(self.objective_function)
             self.objective_difference = (
-                self._objective_history[-2] - self._objective_history[-1]
+                self.objective_log[-2]["objective"]
+                - self.objective_log[-1]["objective"]
             )
             if self.objective_function < self.best_objective:
                 self.best_objective = self.objective_function
@@ -411,17 +412,18 @@ class SNMFOptimizer:
             self.update_weights()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            self._objective_history.append(self.objective_function)
             self.objective_log.append(
                 {
                     "step": "w",
+                    "iteration": self.outiter,
                     "objective": self.objective_function,
                     "timestamp": time.time(),
                 }
             )
 
             self.objective_difference = (
-                self._objective_history[-2] - self._objective_history[-1]
+                self.objective_log[-2]["objective"]
+                - self.objective_log[-1]["objective"]
             )
             if self.objective_function < self.best_objective:
                 self.best_objective = self.objective_function
@@ -439,10 +441,11 @@ class SNMFOptimizer:
                 )
 
             self.objective_difference = (
-                self._objective_history[-2] - self._objective_history[-1]
+                self.objective_log[-2]["objective"]
+                - self.objective_log[-1]["objective"]
             )
             if (
-                self._objective_history[-3] - self.objective_function
+                self.objective_log[-3]["objective"] - self.objective_function
                 < self.objective_difference * 1e-3
             ):
                 break
@@ -452,16 +455,17 @@ class SNMFOptimizer:
             self.update_stretch()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            self._objective_history.append(self.objective_function)
             self.objective_log.append(
                 {
                     "step": "s",
+                    "iteration": self.outiter,
                     "objective": self.objective_function,
                     "timestamp": time.time(),
                 }
             )
             self.objective_difference = (
-                self._objective_history[-2] - self._objective_history[-1]
+                self.objective_log[-2]["objective"]
+                - self.objective_log[-1]["objective"]
             )
             if self.objective_function < self.best_objective:
                 self.best_objective = self.objective_function
@@ -820,10 +824,13 @@ class SNMFOptimizer:
             )
             self.components_ = mask * self.components_
 
-            objective_improvement = self._objective_history[
-                -1
-            ] - self.get_objective_function(
-                residuals=self.get_residual_matrix()
+            # self.objective_function is the baseline value cached right
+            # before we called update_components()
+            objective_improvement = (
+                self.objective_function
+                - self.get_objective_function(
+                    residuals=self.get_residual_matrix()
+                )
             )
 
             # Check if objective function improves
