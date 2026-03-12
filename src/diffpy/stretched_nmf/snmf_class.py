@@ -1,3 +1,5 @@
+import time
+
 import cvxpy as cp
 import numpy as np
 from scipy.optimize import minimize
@@ -82,6 +84,7 @@ class SNMFOptimizer:
         n_components=None,
         random_state=None,
         show_plots=False,
+        verbose=True,
     ):
         """Initialize an instance of sNMF.
 
@@ -131,6 +134,7 @@ class SNMFOptimizer:
         self.num_updates = 0
         self._rng = np.random.default_rng(random_state)
         self.plotter = SNMFPlotter() if show_plots else None
+        self.verbose = verbose
 
         # Enforce exclusive specification of n_components or init_weights
         if (n_components is None and init_weights is None) or (
@@ -183,6 +187,7 @@ class SNMFOptimizer:
             [1, -2, 1],
             offsets=[0, 1, 2],
             shape=(self.n_signals - 2, self.n_signals),
+            dtype=float,
         )
 
     def fit(self, rho=0, eta=0, reset=True):
@@ -235,6 +240,13 @@ class SNMFOptimizer:
         ]
         self.objective_difference = None
         self._objective_history = [self.objective_function]
+        self.objective_log = [
+            {
+                "step": "start",
+                "objective": self.objective_function,
+                "timestamp": time.time(),
+            }
+        ]
 
         # Set up tracking variables for update_components()
         self._prev_components = None
@@ -255,10 +267,11 @@ class SNMFOptimizer:
         obj_diff = (
             self.objective_function - regularization_term - sparsity_term
         )
-        print(
-            f"Start, Objective function: {self.objective_function:.5e}"
-            f", Obj - reg/sparse: {obj_diff:.5e}"
-        )
+        if self.verbose:
+            print(
+                f"Start, Objective function: {self.objective_function:.5e}"
+                f", Obj - reg/sparse: {obj_diff:.5e}"
+            )
 
         # Main optimization loop
         for outiter in range(self.max_iter):
@@ -279,22 +292,19 @@ class SNMFOptimizer:
             obj_diff = (
                 self.objective_function - regularization_term - sparsity_term
             )
-            print(
-                f"Obj fun: {self.objective_function:.5e}, "
-                f", Obj - reg/sparse: {obj_diff:.5e}"
-                f"Iter: {self.outiter}"
-            )
-
+            convergence_threshold = self.objective_function * self.tol
             # Convergence check: Stop if diffun is small
             # and at least min_iter iterations have passed
-            print(
-                "Checking if ",
-                self.objective_difference,
-                " < ",
-                self.objective_function * self.tol,
-            )
+            if self.verbose:
+                print(
+                    f"\n--- Iteration {self.outiter} ---"
+                    f"\nTotal Objective   : {self.objective_function:.5e}"
+                    f"\nBase Obj (No Reg) : {obj_diff:.5e}"
+                    f"\nConvergence Check : Δ {self.objective_difference:.5e}"
+                    f" < {convergence_threshold:.5e} (Threshold)\n"
+                )
             if (
-                self.objective_difference < self.objective_function * self.tol
+                self.objective_difference < convergence_threshold
                 and outiter >= self.min_iter
             ):
                 self.converged_ = True
@@ -305,6 +315,8 @@ class SNMFOptimizer:
         return self
 
     def normalize_results(self):
+        if self.verbose:
+            print("\nNormalizing results after convergence...")
         # Select our best results for normalization
         self.components_ = self.best_matrices[0]
         self.weights_ = self.best_matrices[1]
@@ -335,11 +347,18 @@ class SNMFOptimizer:
             self.update_components()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            print(
-                f"Objective function after normalize_components: "
-                f"{self.objective_function:.5e}"
-            )
+            # print(
+            #     f"Objective function after normalize_components: "
+            #     f"{self.objective_function:.5e}"
+            # )
             self._objective_history.append(self.objective_function)
+            self.objective_log = [
+                {
+                    "step": "c_norm",
+                    "objective": self.objective_function,
+                    "timestamp": time.time(),
+                }
+            ]
             self.objective_difference = (
                 self._objective_history[-2] - self._objective_history[-1]
             )
@@ -357,16 +376,25 @@ class SNMFOptimizer:
                 break
 
     def outer_loop(self):
+        if self.verbose:
+            print("Updating components and weights in outer loop...")
         for iter in range(4):
             self.iter = iter
             self._prev_grad_components = self._grad_components.copy()
             self.update_components()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            print(
-                f"Objective function after update_components: "
-                f"{self.objective_function:.5e}"
-            )
+            self.objective_log = [
+                {
+                    "step": "c",
+                    "objective": self.objective_function,
+                    "timestamp": time.time(),
+                }
+            ]
+            # print(
+            #     f"Objective function after update_components: "
+            #     f"{self.objective_function:.5e}"
+            # )
             self._objective_history.append(self.objective_function)
             self.objective_difference = (
                 self._objective_history[-2] - self._objective_history[-1]
@@ -389,11 +417,19 @@ class SNMFOptimizer:
             self.update_weights()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            print(
-                f"Objective function after update_weights: "
-                f"{self.objective_function:.5e}"
-            )
+            # print(
+            #     f"Objective function after update_weights: "
+            #     f"{self.objective_function:.5e}"
+            # )
             self._objective_history.append(self.objective_function)
+            self.objective_log = [
+                {
+                    "step": "w",
+                    "objective": self.objective_function,
+                    "timestamp": time.time(),
+                }
+            ]
+
             self.objective_difference = (
                 self._objective_history[-2] - self._objective_history[-1]
             )
@@ -426,11 +462,18 @@ class SNMFOptimizer:
             self.update_stretch()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            print(
-                f"Objective function after update_stretch: "
-                f"{self.objective_function:.5e}"
-            )
+            # print(
+            #     f"Objective function after update_stretch: "
+            #     f"{self.objective_function:.5e}"
+            # )
             self._objective_history.append(self.objective_function)
+            self.objective_log = [
+                {
+                    "step": "s",
+                    "objective": self.objective_function,
+                    "timestamp": time.time(),
+                }
+            ]
             self.objective_difference = (
                 self._objective_history[-2] - self._objective_history[-1]
             )
@@ -712,7 +755,12 @@ class SNMFOptimizer:
 
         # Solve using a QP solver
         prob = cp.Problem(objective, constraints)
-        prob.solve(solver=cp.OSQP, verbose=False)
+        prob.solve(
+            solver=cp.OSQP,
+            verbose=False,
+            polish=False,  # TODO keep? removes polish message
+            # solver_verbose=False
+        )
 
         # Get the solution
         return np.maximum(
@@ -722,6 +770,7 @@ class SNMFOptimizer:
     def update_components(self):
         """Updates `components` using gradient-based optimization with
         adaptive step size."""
+
         # Compute stretched components using the interpolation function
         stretched_components, _, _ = (
             self.compute_stretched_components()
@@ -867,6 +916,9 @@ class SNMFOptimizer:
     def update_stretch(self):
         """Updates stretching matrix using constrained optimization
         (equivalent to fmincon in MATLAB)."""
+
+        if self.verbose:
+            print("Updating stretch factors...")
 
         # Flatten stretch for compatibility with the optimizer
         # (since SciPy expects 1D input)
