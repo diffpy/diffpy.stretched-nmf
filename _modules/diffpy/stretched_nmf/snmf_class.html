@@ -1,0 +1,1247 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>diffpy.stretched_nmf.snmf_class &mdash; diffpy.stretched-nmf 0.2.0rc1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=e7a4f63b"></script>
+      <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../_static/copybutton.js?v=cca77546"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            diffpy.stretched-nmf
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/snmf_class.html">SNMFOptimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../release.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">diffpy.stretched-nmf</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">diffpy.stretched_nmf.snmf_class</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for diffpy.stretched_nmf.snmf_class</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">minimize</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.sparse</span><span class="w"> </span><span class="kn">import</span> <span class="n">coo_matrix</span><span class="p">,</span> <span class="n">diags</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">diffpy.stretched_nmf.plotter</span><span class="w"> </span><span class="kn">import</span> <span class="n">SNMFPlotter</span>
+
+
+<div class="viewcode-block" id="SNMFOptimizer">
+<a class="viewcode-back" href="../../../api/snmf_class.html#diffpy.stretched_nmf.snmf_class.SNMFOptimizer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SNMFOptimizer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An implementation of stretched NMF, including sparse stretched</span>
+<span class="sd">    NMF.</span>
+
+<span class="sd">    Instantiate the estimator with hyperparameters, then call ``fit`` to</span>
+<span class="sd">    optimize model factors. Trailing underscores indicate that an attribute</span>
+<span class="sd">    was determined during the fit process.</span>
+
+<span class="sd">    For more information on sNMF, please reference:</span>
+<span class="sd">    Gu, R., Rakita, Y., Lan, L. et al.</span>
+<span class="sd">    Stretched non-negative matrix factorization.</span>
+<span class="sd">    npj Comput Mater 10, 193 (2024) https://doi.org/10.1038/s41524-024-01377-5</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    stretch_ : numpy.ndarray</span>
+<span class="sd">        The best guess (or while running, the current guess) for the stretching</span>
+<span class="sd">        factor matrix.</span>
+<span class="sd">    components_ : numpy.ndarray</span>
+<span class="sd">        The best guess (or while running, the current guess) for the matrix of</span>
+<span class="sd">        component intensities.</span>
+<span class="sd">    weights_ : numpy.ndarray</span>
+<span class="sd">        The best guess (or while running, the current guess) for the matrix of</span>
+<span class="sd">        component weights.</span>
+<span class="sd">    rho : float</span>
+<span class="sd">        The stretching factor that influences the decomposition. Zero</span>
+<span class="sd">        corresponds to no stretching present. Relatively insensitive and</span>
+<span class="sd">        typically adjusted in powers of 10.</span>
+<span class="sd">    eta : float</span>
+<span class="sd">        The sparsity factor that influences the decomposition. Should be set</span>
+<span class="sd">        to zero for non-sparse data such as PDF. Can be used to improve</span>
+<span class="sd">        results for sparse data such as XRD, but due to instability, should</span>
+<span class="sd">        be used only after first selecting the best value for rho. Suggested</span>
+<span class="sd">        adjustment is by powers of 2.</span>
+<span class="sd">    max_iter : int</span>
+<span class="sd">        The maximum number of times to update each of stretch, components,</span>
+<span class="sd">        and weights before stopping the optimization.</span>
+<span class="sd">    min_iter : int</span>
+<span class="sd">        The minimum number of times to update each of stretch, components,</span>
+<span class="sd">        and weights before terminating the optimization due to low/no</span>
+<span class="sd">        improvement.</span>
+<span class="sd">    tol : float</span>
+<span class="sd">        The convergence threshold. This is the minimum fractional improvement</span>
+<span class="sd">        in the objective function to allow without terminating the</span>
+<span class="sd">        optimization.</span>
+<span class="sd">    n_components : int</span>
+<span class="sd">        The referred number of components when ``init_weights`` is not</span>
+<span class="sd">        provided to ``fit``.</span>
+<span class="sd">    random_state : int</span>
+<span class="sd">        The seed for the initial guesses at the matrices (stretch, components,</span>
+<span class="sd">        and weights) created by the decomposition.</span>
+<span class="sd">    n_components_ : int</span>
+<span class="sd">        The learned number of components from initialization.</span>
+<span class="sd">    signal_length_ : int</span>
+<span class="sd">        The number of rows in the fitted source matrix.</span>
+<span class="sd">    n_signals_ : int</span>
+<span class="sd">        The number of columns in the fitted source matrix.</span>
+<span class="sd">    objective_function_ : float</span>
+<span class="sd">        Current objective value from the most recent update.</span>
+<span class="sd">    objective_difference_ : float</span>
+<span class="sd">        The change in the objective function value since the last update. A</span>
+<span class="sd">        positive value means that the result improved.</span>
+<span class="sd">    n_iter_ : int</span>
+<span class="sd">        The number of outer iterations completed in ``fit``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SNMFOptimizer.__init__">
+<a class="viewcode-back" href="../../../api/snmf_class.html#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">n_components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">max_iter</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+        <span class="n">min_iter</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">tol</span><span class="o">=</span><span class="mf">5e-7</span><span class="p">,</span>
+        <span class="n">rho</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">eta</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">show_plots</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize an instance of sNMF with estimator</span>
+<span class="sd">        hyperparameters.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_components : int, optional</span>
+<span class="sd">            The number of components to extract when ``init_weights`` is not</span>
+<span class="sd">            provided to ``fit``.</span>
+<span class="sd">        max_iter : int</span>
+<span class="sd">            The maximum number of times to update each of A, X, and Y before</span>
+<span class="sd">            stopping the optimization. Optional.</span>
+<span class="sd">        min_iter : int</span>
+<span class="sd">            The minimum number of outer-loop iterations before convergence</span>
+<span class="sd">            checks can stop optimization. Optional.</span>
+<span class="sd">        tol : float</span>
+<span class="sd">            The convergence threshold. This is the minimum fractional</span>
+<span class="sd">            improvement in the objective function to allow without terminating</span>
+<span class="sd">            the optimization. Note that a minimum of 20 updates are run before</span>
+<span class="sd">            this parameter is checked. Optional.</span>
+<span class="sd">        rho : float</span>
+<span class="sd">            The stretching regularization hyperparameter. Zero corresponds to</span>
+<span class="sd">            no stretching.</span>
+<span class="sd">        eta : float</span>
+<span class="sd">            The sparsity regularization hyperparameter. Turn off for non-sparse</span>
+<span class="sd">            data such as PDF.</span>
+<span class="sd">        random_state : int</span>
+<span class="sd">            The seed for the initial guesses at the matrices (A, X, and Y)</span>
+<span class="sd">            created by the decomposition. Optional.</span>
+<span class="sd">        show_plots : bool</span>
+<span class="sd">            Enables plotting at each step of the decomposition. Optional.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">n_components</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">n_components</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_components must be a positive integer.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_iter</span> <span class="o">=</span> <span class="n">min_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">=</span> <span class="n">rho</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">=</span> <span class="n">eta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_plots</span> <span class="o">=</span> <span class="n">show_plots</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span> <span class="o">=</span> <span class="n">SNMFPlotter</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_plots</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_factors</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">source_matrix</span><span class="p">,</span>
+        <span class="n">init_weights</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">init_components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">init_stretch</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span> <span class="o">=</span> <span class="n">source_matrix</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="k">if</span> <span class="n">init_weights</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;n_components must be provided when init_weights is not set.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">init_weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">n_components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="o">.</span><span class="n">beta</span><span class="p">(</span>
+                <span class="n">a</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+                <span class="n">b</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
+                <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">init_weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">n_components</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">!=</span> <span class="n">n_components</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;init_weights has a different number of components than &quot;</span>
+                    <span class="s2">&quot;n_components.&quot;</span>
+                <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">init_stretch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">stretch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">)</span>
+            <span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="mf">1e-3</span><span class="p">,</span>
+                <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">stretch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">init_stretch</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">init_components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="o">.</span><span class="n">random</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="n">n_components</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">components</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">init_components</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="n">expected_weights_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">)</span>
+        <span class="n">expected_stretch_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">)</span>
+        <span class="n">expected_components_shape</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="n">n_components</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">weights</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">expected_weights_shape</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;init_weights must have shape &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">expected_weights_shape</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">weights</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">stretch</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">expected_stretch_shape</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;init_stretch must have shape &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">expected_stretch_shape</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">stretch</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">components</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">expected_components_shape</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;init_components must have shape &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">expected_components_shape</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">components</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span> <span class="o">=</span> <span class="n">n_components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">weights</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span> <span class="o">=</span> <span class="n">stretch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">components</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_stretch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># Second-order spline: Tridiagonal (-2 on diags, 1 on sub/superdiags)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_spline_smooth_operator</span> <span class="o">=</span> <span class="mf">0.25</span> <span class="o">*</span> <span class="n">diags</span><span class="p">(</span>
+            <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+            <span class="n">offsets</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="SNMFOptimizer.fit">
+<a class="viewcode-back" href="../../../api/snmf_class.html#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.fit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">source_matrix</span><span class="p">,</span>
+        <span class="n">init_weights</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">init_components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">init_stretch</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">reset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the sNMF optimization on ``source_matrix``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_matrix : ndarray of shape (signal_length, n_signals)</span>
+<span class="sd">            The source data matrix to decompose.</span>
+<span class="sd">        init_weights : ndarray, optional</span>
+<span class="sd">            The initial weights matrix of shape</span>
+<span class="sd">            ``(n_components, n_signals)``.</span>
+<span class="sd">        init_components : ndarray, optional</span>
+<span class="sd">            Optional initial components matrix of shape</span>
+<span class="sd">            ``(signal_length, n_components)``.</span>
+<span class="sd">        init_stretch : ndarray, optional</span>
+<span class="sd">            The initial stretch matrix of shape</span>
+<span class="sd">            ``(n_components, n_signals)``.</span>
+<span class="sd">        reset : bool</span>
+<span class="sd">            Whether to reinitialize model factors before fitting. If ``False``,</span>
+<span class="sd">            the previous factor matrices are reused.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">source_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">source_matrix</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">source_matrix</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;source_matrix must be a 2D array.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">converged_</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source_matrix</span> <span class="o">=</span> <span class="n">source_matrix</span>
+
+        <span class="k">if</span> <span class="n">reset</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_factors</span><span class="p">(</span>
+                <span class="n">source_matrix</span><span class="o">=</span><span class="n">source_matrix</span><span class="p">,</span>
+                <span class="n">init_weights</span><span class="o">=</span><span class="n">init_weights</span><span class="p">,</span>
+                <span class="n">init_components</span><span class="o">=</span><span class="n">init_components</span><span class="p">,</span>
+                <span class="n">init_stretch</span><span class="o">=</span><span class="n">init_stretch</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">init_weights</span><span class="p">,</span> <span class="n">init_components</span><span class="p">,</span> <span class="n">init_stretch</span><span class="p">)</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;init_weights, init_components, and init_stretch can only &quot;</span>
+                    <span class="s2">&quot;be provided when reset=True.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
+                <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span>
+                    <span class="s2">&quot;components_&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;weights_&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;stretch_&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;n_components_&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;signal_length_&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;n_signals_&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;_spline_smooth_operator&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Cannot warm-start before initialization. Call fit with &quot;</span>
+                    <span class="s2">&quot;reset=True first.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">expected_shape</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">source_matrix</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">expected_shape</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Warm-start requires source_matrix to keep the same shape &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">expected_shape</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">source_matrix</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+
+        <span class="c1"># Set stretch matrix to 1 if no stretching present</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="p">)</span>
+
+        <span class="c1"># Set up residual matrix, objective function, and history</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_matrices_</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">]</span>
+
+        <span class="c1"># Set up tracking variables for _update_components()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prev_components</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_grad_components</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prev_grad_components</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">regularization_term</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="mf">0.5</span>
+            <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho</span>
+            <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_spline_smooth_operator</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="s2">&quot;fro&quot;</span>
+            <span class="p">)</span>
+            <span class="o">**</span> <span class="mi">2</span>
+        <span class="p">)</span>
+        <span class="n">sparsity_term</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">)</span>
+        <span class="p">)</span>  <span class="c1"># Square root penalty</span>
+        <span class="n">objective_without_penalty</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">-</span> <span class="n">regularization_term</span> <span class="o">-</span> <span class="n">sparsity_term</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Start, Objective function: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;, Obj - reg/sparse: </span><span class="si">{</span><span class="n">objective_without_penalty</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Main optimization loop</span>
+        <span class="k">for</span> <span class="n">outiter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_outer_iter</span> <span class="o">=</span> <span class="n">outiter</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_outer_loop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_iter_</span> <span class="o">=</span> <span class="n">outiter</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="c1"># Print diagnostics</span>
+            <span class="n">regularization_term</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="mf">0.5</span>
+                <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho</span>
+                <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_spline_smooth_operator</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="s2">&quot;fro&quot;</span>
+                <span class="p">)</span>
+                <span class="o">**</span> <span class="mi">2</span>
+            <span class="p">)</span>
+            <span class="n">sparsity_term</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">)</span>
+            <span class="p">)</span>  <span class="c1"># Square root penalty</span>
+            <span class="n">objective_without_penalty</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">-</span> <span class="n">regularization_term</span> <span class="o">-</span> <span class="n">sparsity_term</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Obj fun: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Obj - reg/sparse: </span><span class="si">{</span><span class="n">objective_without_penalty</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Iter: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_outer_iter</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="n">obj_diff</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_function</span> <span class="o">-</span> <span class="n">regularization_term</span> <span class="o">-</span> <span class="n">sparsity_term</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Obj fun: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;, Obj - reg/sparse: </span><span class="si">{</span><span class="n">obj_diff</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Iter: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">outiter</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Convergence check: Stop if diffun is small</span>
+            <span class="c1"># and at least min_iter iterations have passed</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="s2">&quot;Checking if &quot;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span><span class="p">,</span>
+                <span class="s2">&quot; &lt; &quot;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span>
+                <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
+                <span class="ow">and</span> <span class="n">outiter</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_iter</span>
+            <span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">converged_</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">break</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_results</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction_err_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span><span class="p">,</span> <span class="s2">&quot;fro&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_results</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Select our best results for normalization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_matrices_</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_matrices_</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_matrices_</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="c1"># Normalize weights/stretch first</span>
+        <span class="n">weights_row_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">/</span> <span class="n">weights_row_max</span>
+        <span class="n">stretch_row_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span> <span class="o">/</span> <span class="n">stretch_row_max</span>
+
+        <span class="c1"># re-running with component updates only vs normalized weights/stretch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_grad_components</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span>
+        <span class="p">)</span>  <span class="c1"># Gradient of X (zeros for now)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prev_grad_components</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span>
+        <span class="p">)</span>  <span class="c1"># Previous gradient of X (zeros for now)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_outer_iter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_iter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">outiter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_outer_iter</span> <span class="o">=</span> <span class="n">outiter</span>
+            <span class="k">if</span> <span class="n">outiter</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_inner_iter</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="mi">1</span>  <span class="c1"># So step size can adapt without an inner loop</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_components</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Objective function after normalize_components: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="n">components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">,</span>
+                    <span class="n">weights</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">,</span>
+                    <span class="n">stretch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="p">,</span>
+                    <span class="n">update_tag</span><span class="o">=</span><span class="s2">&quot;normalize components&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span>
+                <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
+                <span class="ow">and</span> <span class="n">outiter</span> <span class="o">&gt;=</span> <span class="mi">7</span>
+            <span class="p">):</span>
+                <span class="k">break</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_outer_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">inner_iter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_inner_iter</span> <span class="o">=</span> <span class="n">inner_iter</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_prev_grad_components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grad_components</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_components</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Objective function after _update_components: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_matrices_</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                <span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="n">components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">,</span>
+                    <span class="n">weights</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">,</span>
+                    <span class="n">stretch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="p">,</span>
+                    <span class="n">update_tag</span><span class="o">=</span><span class="s2">&quot;components&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_weights</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Objective function after _update_weights: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_matrices_</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                <span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="n">components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">,</span>
+                    <span class="n">weights</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">,</span>
+                    <span class="n">stretch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="p">,</span>
+                    <span class="n">update_tag</span><span class="o">=</span><span class="s2">&quot;weights&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span>
+                <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">*</span> <span class="mf">1e-3</span>
+            <span class="p">):</span>
+                <span class="k">break</span>
+
+        <span class="c1"># Skip updating stretch if no stretching factor</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_stretch</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Objective function after _update_stretch: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_matrices_</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+                <span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="n">components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">,</span>
+                    <span class="n">weights</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">,</span>
+                    <span class="n">stretch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="p">,</span>
+                    <span class="n">update_tag</span><span class="o">=</span><span class="s2">&quot;stretch&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_residual_matrix</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the residuals (difference) between the source matrix</span>
+<span class="sd">        and its reconstruction.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        components : (signal_len, n_components) array, optional</span>
+<span class="sd">        weights    : (n_components, n_signals) array, optional</span>
+<span class="sd">        stretch    : (n_components, n_signals) array, optional</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        residuals : (signal_len, n_signals) array</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span>
+        <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span>
+        <span class="k">if</span> <span class="n">stretch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">stretch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span>
+
+        <span class="n">reconstructed_matrix</span> <span class="o">=</span> <span class="n">_reconstruct_matrix</span><span class="p">(</span>
+            <span class="n">components</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">stretch</span>
+        <span class="p">)</span>
+        <span class="n">residuals</span> <span class="o">=</span> <span class="n">reconstructed_matrix</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_matrix</span>
+
+        <span class="k">return</span> <span class="n">residuals</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_objective_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">residuals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the objective value, passing stored attributes or</span>
+<span class="sd">        overrides to _compute_objective_function().</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        residuals : ndarray, optional</span>
+<span class="sd">            Residual matrix to use instead of self.residuals_.</span>
+<span class="sd">        stretch : ndarray, optional</span>
+<span class="sd">            Stretch matrix to use instead of self.stretch_.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Current objective function value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">SNMFOptimizer</span><span class="o">.</span><span class="n">_compute_objective_function</span><span class="p">(</span>
+            <span class="n">components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">,</span>
+            <span class="n">residuals</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="k">if</span> <span class="n">residuals</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">residuals</span><span class="p">,</span>
+            <span class="n">stretch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span> <span class="k">if</span> <span class="n">stretch</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">stretch</span><span class="p">,</span>
+            <span class="n">rho</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span>
+            <span class="n">eta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eta</span><span class="p">,</span>
+            <span class="n">spline_smooth_operator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_spline_smooth_operator</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_stretched_components</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Interpolates each component along its sample axis according</span>
+<span class="sd">        to per-(component, signal) stretch factors, then applies</span>
+<span class="sd">        per-(component, signal) weights. Also computes the first and</span>
+<span class="sd">        second derivatives with respect to stretch. Left and right,</span>
+<span class="sd">        respectively, refer to the sample prior to and subsequent to the</span>
+<span class="sd">        interpolated sample&#39;s position.</span>
+
+<span class="sd">        Inputs</span>
+<span class="sd">        ------</span>
+<span class="sd">        components : array, shape (signal_len, n_components)</span>
+<span class="sd">            Each column is a component with signal_len samples.</span>
+<span class="sd">        weights : array, shape (n_components, n_signals)</span>
+<span class="sd">            Per-(component, signal) weights.</span>
+<span class="sd">        stretch : array, shape (n_components, n_signals)</span>
+<span class="sd">            Per-(component, signal) stretch factors.</span>
+
+<span class="sd">        Outputs</span>
+<span class="sd">        -------</span>
+<span class="sd">        stretched_components : array, shape (signal_len, n_comps * n_sigs)</span>
+<span class="sd">            Interpolated and weighted components.</span>
+<span class="sd">        d_stretched_components : array, shape (signal_len, n_comps * n_sigs)</span>
+<span class="sd">            First derivatives with respect to stretch.</span>
+<span class="sd">        dd_stretched_components : array, shape (signal_len, n_comps * n_sigs)</span>
+<span class="sd">            Second derivatives with respect to stretch.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># --- Defaults ---</span>
+        <span class="k">if</span> <span class="n">components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span>
+        <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span>
+        <span class="k">if</span> <span class="n">stretch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">stretch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span>
+
+        <span class="c1"># Dimensions</span>
+        <span class="n">signal_len</span> <span class="o">=</span> <span class="n">components</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># number of samples</span>
+        <span class="n">n_components</span> <span class="o">=</span> <span class="n">components</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># number of components</span>
+        <span class="n">n_signals</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># number of signals</span>
+
+        <span class="c1"># Guard stretches</span>
+        <span class="n">eps</span> <span class="o">=</span> <span class="mf">1e-8</span>
+        <span class="n">stretch</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">stretch</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">stretch_inv</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">stretch</span>
+
+        <span class="c1"># Apply stretching to the original sample indices,</span>
+        <span class="c1"># represented as a &quot;time-stretch&quot;</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">signal_len</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+            <span class="o">*</span> <span class="n">stretch_inv</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+        <span class="p">)</span>
+        <span class="c1"># has shape (signal_len, n_components, n_signals)</span>
+
+        <span class="c1"># For each stretched coordinate, find its prior integer (original)</span>
+        <span class="c1"># index and their difference</span>
+        <span class="n">i0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>  <span class="c1"># prior original index</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">t</span> <span class="o">-</span> <span class="n">i0</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>  <span class="c1"># fractional distance between left/right</span>
+
+        <span class="c1"># Clip indices to range (0, signal_len - 1) to maintain original size</span>
+        <span class="n">max_idx</span> <span class="o">=</span> <span class="n">signal_len</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">i0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">i0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">max_idx</span><span class="p">)</span>
+        <span class="n">i1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">i0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">max_idx</span><span class="p">)</span>
+
+        <span class="c1"># Gather sample values</span>
+        <span class="n">comps_3d</span> <span class="o">=</span> <span class="n">components</span><span class="p">[</span>
+            <span class="p">:,</span> <span class="p">:,</span> <span class="kc">None</span>
+        <span class="p">]</span>  <span class="c1"># expand components by a dim for broadcasting across n_signals</span>
+        <span class="n">c0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">take_along_axis</span><span class="p">(</span><span class="n">comps_3d</span><span class="p">,</span> <span class="n">i0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># left sample values</span>
+        <span class="n">c1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">take_along_axis</span><span class="p">(</span><span class="n">comps_3d</span><span class="p">,</span> <span class="n">i1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># right sample values</span>
+
+        <span class="c1"># Linear interpolation to determine stretched sample values</span>
+        <span class="n">interp</span> <span class="o">=</span> <span class="n">c0</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">)</span> <span class="o">+</span> <span class="n">c1</span> <span class="o">*</span> <span class="n">alpha</span>
+        <span class="n">interp_weighted</span> <span class="o">=</span> <span class="n">interp</span> <span class="o">*</span> <span class="n">weights</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+
+        <span class="c1"># Derivatives</span>
+        <span class="n">di</span> <span class="o">=</span> <span class="o">-</span><span class="n">t</span> <span class="o">*</span> <span class="n">stretch_inv</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>  <span class="c1"># first-derivative coefficient</span>
+        <span class="n">ddi</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="o">-</span><span class="n">di</span> <span class="o">*</span> <span class="n">stretch_inv</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="mf">2.0</span>
+        <span class="p">)</span>  <span class="c1"># second-derivative coefficient</span>
+
+        <span class="n">d_unweighted</span> <span class="o">=</span> <span class="n">c0</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">di</span><span class="p">)</span> <span class="o">+</span> <span class="n">c1</span> <span class="o">*</span> <span class="n">di</span>
+        <span class="n">dd_unweighted</span> <span class="o">=</span> <span class="n">c0</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="n">ddi</span><span class="p">)</span> <span class="o">+</span> <span class="n">c1</span> <span class="o">*</span> <span class="n">ddi</span>
+
+        <span class="n">d_weighted</span> <span class="o">=</span> <span class="n">d_unweighted</span> <span class="o">*</span> <span class="n">weights</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+        <span class="n">dd_weighted</span> <span class="o">=</span> <span class="n">dd_unweighted</span> <span class="o">*</span> <span class="n">weights</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+
+        <span class="c1"># Flatten back to expected shape (signal_len, n_components * n_signals)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">interp_weighted</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">signal_len</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">*</span> <span class="n">n_signals</span><span class="p">),</span>
+            <span class="n">d_weighted</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">signal_len</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">*</span> <span class="n">n_signals</span><span class="p">),</span>
+            <span class="n">dd_weighted</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">signal_len</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">*</span> <span class="n">n_signals</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_transformation_matrix</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">residuals</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Computes the transformation matrix `stretch_transformed` for</span>
+<span class="sd">        residuals, using scaling matrix `stretch` and weight</span>
+<span class="sd">        coefficients `weights`.&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">stretch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">stretch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span>
+        <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span>
+        <span class="k">if</span> <span class="n">residuals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">residuals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span>
+
+        <span class="c1"># Compute scaling matrix</span>
+        <span class="n">stretch_tiled</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span>
+            <span class="n">stretch</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span><span class="p">)</span>
+            <span class="o">**</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Compute indices</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">stretch_tiled</span>
+
+        <span class="c1"># Weighting coefficients</span>
+        <span class="n">weights_tiled</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span>
+            <span class="n">weights</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span>
+            <span class="p">),</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Compute floor indices</span>
+        <span class="n">floor_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">floor_indices_1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">floor_indices</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">)</span>
+        <span class="n">floor_indices_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">floor_indices_1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">)</span>
+
+        <span class="c1"># Compute fractional part</span>
+        <span class="n">fractional_indices</span> <span class="o">=</span> <span class="n">indices</span> <span class="o">-</span> <span class="n">floor_indices</span>
+
+        <span class="c1"># Expand row indices</span>
+        <span class="n">repm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">),</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Compute transformations</span>
+        <span class="n">kron</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">(</span><span class="n">residuals</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">)))</span>
+        <span class="n">fractional_kron</span> <span class="o">=</span> <span class="n">kron</span> <span class="o">*</span> <span class="n">fractional_indices</span>
+        <span class="n">fractional_weights</span> <span class="o">=</span> <span class="p">(</span><span class="n">fractional_indices</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">weights_tiled</span>
+
+        <span class="c1"># Construct sparse matrices</span>
+        <span class="n">x2</span> <span class="o">=</span> <span class="n">coo_matrix</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="p">(</span><span class="o">-</span><span class="n">kron</span> <span class="o">*</span> <span class="n">fractional_weights</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+                <span class="p">(</span><span class="n">floor_indices_1</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">repm</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+            <span class="p">),</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">),</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">tocsc</span><span class="p">()</span>
+        <span class="n">x3</span> <span class="o">=</span> <span class="n">coo_matrix</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="p">(</span><span class="n">fractional_kron</span> <span class="o">*</span> <span class="n">weights_tiled</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+                <span class="p">(</span><span class="n">floor_indices_2</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">repm</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+            <span class="p">),</span>
+            <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">),</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">tocsc</span><span class="p">()</span>
+
+        <span class="c1"># Combine the last row into previous, then remove the last row</span>
+        <span class="n">x2</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">x2</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">x3</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+=</span> <span class="n">x3</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">x2</span> <span class="o">=</span> <span class="n">x2</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">x3</span> <span class="o">=</span> <span class="n">x3</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="n">stretch_transformed</span> <span class="o">=</span> <span class="n">x2</span> <span class="o">+</span> <span class="n">x3</span>
+
+        <span class="k">return</span> <span class="n">stretch_transformed</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_solve_quadratic_program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Solves the quadratic program for updating y in stretched NMF:</span>
+
+<span class="sd">            min J(y) = 0.5 * y^T q y + d^T y</span>
+<span class="sd">            subject to: 0 ≤ y ≤ 1</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">        - t: (N, k) ndarray</span>
+<span class="sd">        - source_matrix_col: (N,) column of source_matrix for the</span>
+<span class="sd">        corresponding m</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">        - y: (k,) optimal solution</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">source_matrix_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_matrix</span><span class="p">[:,</span> <span class="n">m</span><span class="p">]</span>
+
+        <span class="c1"># Compute q and d</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">t</span>  <span class="c1"># Gram matrix (k x k)</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="o">-</span><span class="n">t</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">source_matrix_col</span>  <span class="c1"># Linear term (k,)</span>
+
+        <span class="n">k</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Number of variables</span>
+
+        <span class="c1"># Regularize q to ensure positive semi-definiteness</span>
+        <span class="n">reg_factor</span> <span class="o">=</span> <span class="mf">1e-8</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span>
+            <span class="n">q</span><span class="p">,</span> <span class="nb">ord</span><span class="o">=</span><span class="s2">&quot;fro&quot;</span>
+        <span class="p">)</span>  <span class="c1"># Adaptive regularization, original was fixed</span>
+        <span class="n">q</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">*</span> <span class="n">reg_factor</span>
+
+        <span class="c1"># Define optimization variable</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+
+        <span class="c1"># Define quadratic objective</span>
+        <span class="n">objective</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Minimize</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">cp</span><span class="o">.</span><span class="n">quad_form</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span> <span class="o">+</span> <span class="n">d</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">y</span><span class="p">)</span>
+
+        <span class="c1"># Define constraints (0 ≤ y ≤ 1)</span>
+        <span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span><span class="n">y</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">y</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Solve using a QP solver</span>
+        <span class="n">prob</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">constraints</span><span class="p">)</span>
+        <span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">OSQP</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># Get the solution</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span>
+            <span class="n">y</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="p">)</span>  <span class="c1"># Ensure non-negative values in case of solver tolerance issues</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_components</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Updates `components` using gradient-based optimization with</span>
+<span class="sd">        adaptive step size.&quot;&quot;&quot;</span>
+        <span class="c1"># Compute stretched components using the interpolation function</span>
+        <span class="n">stretched_components</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute_stretched_components</span><span class="p">()</span>
+        <span class="p">)</span>  <span class="c1"># Discard the derivatives</span>
+        <span class="c1"># Compute reshaped_stretched_components and component_residuals</span>
+        <span class="n">intermediate_reshaped</span> <span class="o">=</span> <span class="n">stretched_components</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span>
+            <span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">),</span>
+            <span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">reshaped_stretched_components</span> <span class="o">=</span> <span class="n">intermediate_reshaped</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span><span class="p">)</span>
+        <span class="n">component_residuals</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">reshaped_stretched_components</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_matrix</span>
+        <span class="p">)</span>
+        <span class="c1"># Compute gradient</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_grad_components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_transformation_matrix</span><span class="p">(</span>
+            <span class="n">residuals</span><span class="o">=</span><span class="n">component_residuals</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>  <span class="c1"># toarray equivalent of full, make non-sparse</span>
+
+        <span class="c1"># Compute initial step size `initial_step_size`</span>
+        <span class="n">initial_step_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">min</span><span class="p">()])</span>
+        <span class="c1"># Compute adaptive step size `step_size`</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outer_iter</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_iter</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">step_size</span> <span class="o">=</span> <span class="n">initial_step_size</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_grad_components</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prev_grad_components</span><span class="p">)</span>
+                <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prev_components</span><span class="p">)</span>
+            <span class="p">)</span>  <span class="c1"># Element-wise multiplication</span>
+            <span class="n">denom</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prev_components</span><span class="p">,</span> <span class="s2">&quot;fro&quot;</span><span class="p">)</span>
+                <span class="o">**</span> <span class="mi">2</span>
+            <span class="p">)</span>  <span class="c1"># Frobenius norm squared</span>
+            <span class="n">step_size</span> <span class="o">=</span> <span class="n">num</span> <span class="o">/</span> <span class="n">denom</span> <span class="k">if</span> <span class="n">denom</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">initial_step_size</span>
+            <span class="k">if</span> <span class="n">step_size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">step_size</span> <span class="o">=</span> <span class="n">initial_step_size</span>
+
+        <span class="c1"># Store our old X before updating because it is used in step selection</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prev_components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>  <span class="c1"># iterate updating components</span>
+            <span class="n">components_step</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_prev_components</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grad_components</span> <span class="o">/</span> <span class="n">step_size</span>
+            <span class="p">)</span>
+            <span class="c1"># Solve x^3 + p*x + q = 0 for the largest real root</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span>
+                <span class="n">_cubic_largest_real_root</span><span class="p">(</span>
+                    <span class="o">-</span><span class="n">components_step</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">step_size</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="c1"># Mask values that should be set to zero</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">step_size</span> <span class="o">/</span> <span class="mi">2</span>
+                <span class="o">-</span> <span class="n">step_size</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">*</span> <span class="n">components_step</span>
+                <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">)</span>
+                <span class="o">&lt;</span> <span class="mi">0</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span>
+
+            <span class="n">objective_improvement</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span>
+                <span class="o">-</span><span class="mi">1</span>
+            <span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">(</span>
+                <span class="n">residuals</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Check if objective function improves</span>
+            <span class="k">if</span> <span class="n">objective_improvement</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="c1"># If not, increase step_size (step size)</span>
+            <span class="n">step_size</span> <span class="o">*=</span> <span class="mi">2</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">step_size</span><span class="p">):</span>
+                <span class="k">break</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Updates weights by building the stretched component matrix</span>
+<span class="sd">        `stretched_comps` with np.interp and solving a quadratic program</span>
+<span class="sd">        for each signal.&quot;&quot;&quot;</span>
+
+        <span class="n">sample_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">signal</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">):</span>
+            <span class="c1"># Stretch factors for this signal across components:</span>
+            <span class="n">this_stretch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="p">[:,</span> <span class="n">signal</span><span class="p">]</span>
+            <span class="c1"># Build stretched_comps[:, k] by interpolating component at frac.</span>
+            <span class="c1"># pos. index / this_stretch[comp]</span>
+            <span class="n">stretched_comps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">),</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">):</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="n">sample_indices</span> <span class="o">/</span> <span class="n">this_stretch</span><span class="p">[</span><span class="n">comp</span><span class="p">]</span>
+                <span class="n">stretched_comps</span><span class="p">[:,</span> <span class="n">comp</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span>
+                    <span class="n">pos</span><span class="p">,</span>
+                    <span class="n">sample_indices</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">[:,</span> <span class="n">comp</span><span class="p">],</span>
+                    <span class="n">left</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">comp</span><span class="p">],</span>
+                    <span class="n">right</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">comp</span><span class="p">],</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Solve quadratic problem for a given signal and update its weight</span>
+            <span class="n">new_weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solve_quadratic_program</span><span class="p">(</span>
+                <span class="n">t</span><span class="o">=</span><span class="n">stretched_comps</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="n">signal</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span><span class="p">[:,</span> <span class="n">signal</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_weight</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_regularize_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stretch</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">stretch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">stretch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span>
+
+        <span class="n">stretched_components</span><span class="p">,</span> <span class="n">d_stretch_comps</span><span class="p">,</span> <span class="n">dd_stretch_comps</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compute_stretched_components</span><span class="p">(</span><span class="n">stretch</span><span class="o">=</span><span class="n">stretch</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">intermediate</span> <span class="o">=</span> <span class="n">stretched_components</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">),</span>
+            <span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">residuals</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">intermediate</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">signal_length_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span>
+            <span class="p">)</span>
+            <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_matrix</span>
+        <span class="p">)</span>
+
+        <span class="n">fun</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">(</span><span class="n">residuals</span><span class="p">,</span> <span class="n">stretch</span><span class="p">)</span>
+
+        <span class="n">tiled_res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">residuals</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">))</span>
+        <span class="n">grad_flat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">d_stretch_comps</span> <span class="o">*</span> <span class="n">tiled_res</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">gra</span> <span class="o">=</span> <span class="n">grad_flat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components_</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s2">&quot;F&quot;</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">gra</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rho</span>
+            <span class="o">*</span> <span class="n">stretch</span>
+            <span class="o">@</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_spline_smooth_operator</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spline_smooth_operator</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Hessian would go here</span>
+
+        <span class="k">return</span> <span class="n">fun</span><span class="p">,</span> <span class="n">gra</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_stretch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Updates stretching matrix using constrained optimization</span>
+<span class="sd">        (equivalent to fmincon in MATLAB).&quot;&quot;&quot;</span>
+
+        <span class="c1"># Flatten stretch for compatibility with the optimizer</span>
+        <span class="c1"># (since SciPy expects 1D input)</span>
+        <span class="n">stretch_flat_initial</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="c1"># Define the optimization function</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">objective</span><span class="p">(</span><span class="n">stretch_vec</span><span class="p">):</span>
+            <span class="n">stretch_matrix</span> <span class="o">=</span> <span class="n">stretch_vec</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">shape</span>
+            <span class="p">)</span>  <span class="c1"># Reshape back to matrix form</span>
+            <span class="n">fun</span><span class="p">,</span> <span class="n">gra</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_regularize_function</span><span class="p">(</span><span class="n">stretch_matrix</span><span class="p">)</span>
+            <span class="n">gra</span> <span class="o">=</span> <span class="n">gra</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">fun</span><span class="p">,</span> <span class="n">gra</span>
+
+        <span class="c1"># Optimization constraints: lower bound 0.1, no upper bound</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="p">]</span> <span class="o">*</span> <span class="n">stretch_flat_initial</span><span class="o">.</span><span class="n">size</span>  <span class="c1"># Equivalent to 0.1 * ones(K, M)</span>
+
+        <span class="c1"># Solve optimization problem (equivalent to fmincon)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span>
+            <span class="n">fun</span><span class="o">=</span><span class="k">lambda</span> <span class="n">stretch_vec</span><span class="p">:</span> <span class="n">objective</span><span class="p">(</span><span class="n">stretch_vec</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">x0</span><span class="o">=</span><span class="n">stretch_flat_initial</span><span class="p">,</span>
+            <span class="n">method</span><span class="o">=</span><span class="s2">&quot;trust-constr&quot;</span><span class="p">,</span>  <span class="c1"># Substitute for &#39;trust-region-reflective&#39;</span>
+            <span class="n">jac</span><span class="o">=</span><span class="k">lambda</span> <span class="n">stretch_vec</span><span class="p">:</span> <span class="n">objective</span><span class="p">(</span><span class="n">stretch_vec</span><span class="p">)[</span><span class="mi">1</span><span class="p">],</span>  <span class="c1"># Gradient</span>
+            <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Update stretch with the optimized values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_objective_function</span><span class="p">(</span>
+        <span class="n">components</span><span class="p">,</span> <span class="n">residuals</span><span class="p">,</span> <span class="n">stretch</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">eta</span><span class="p">,</span> <span class="n">spline_smooth_operator</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Computes the objective function used in stretched non-</span>
+<span class="sd">        negative matrix factorization.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        components : ndarray</span>
+<span class="sd">            Non-negative matrix of component signals :math:`X`.</span>
+<span class="sd">        residuals : ndarray</span>
+<span class="sd">            Difference between reconstructed and observed data.</span>
+<span class="sd">        stretch : ndarray</span>
+<span class="sd">            Stretching factors :math:`A` applied to each component across</span>
+<span class="sd">            samples.</span>
+<span class="sd">        rho : float</span>
+<span class="sd">            Regularization parameter enforcing smooth variation in :math:`A`.</span>
+<span class="sd">        eta : float</span>
+<span class="sd">            Sparsity-promoting regularization parameter applied to :math:`X`.</span>
+<span class="sd">        spline_smooth_operator : ndarray</span>
+<span class="sd">            Linear operator :math:`L` penalizing non-smooth changes</span>
+<span class="sd">            in :math:`A`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Value of the stretched-NMF objective function.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The stretched-NMF objective function :math:`J` is</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">           J(X, Y, A) =</span>
+<span class="sd">              \tfrac{1}{2} \lVert Z - Y\,S(A)X \rVert_F^2</span>
+<span class="sd">              + \tfrac{\rho}{2} \lVert L A \rVert_F^2</span>
+<span class="sd">              + \eta \sum_{i,j} \sqrt{X_{ij}} \,,</span>
+
+<span class="sd">        where :math:`Z` is the data matrix, :math:`Y` contains the non-negative</span>
+<span class="sd">        weights, :math:`S(A)` denotes the spline-interp. stretching operator,</span>
+<span class="sd">        and :math:`\lVert \cdot \rVert_F` is the Frobenius norm.</span>
+
+<span class="sd">        Special cases</span>
+<span class="sd">        -------------</span>
+<span class="sd">        - :math:`\rho = 0` — no smoothness regularization on stretch factors.</span>
+<span class="sd">        - :math:`\eta = 0` — no sparsity promotion on components.</span>
+<span class="sd">        - :math:`\rho = \eta = 0` — reduces to the classical NMF least-squares</span>
+<span class="sd">          objective :math:`\tfrac{1}{2} \lVert Z - YX \rVert_F^2`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">residual_term</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">residuals</span><span class="p">,</span> <span class="s2">&quot;fro&quot;</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">regularization_term</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="mf">0.5</span>
+            <span class="o">*</span> <span class="n">rho</span>
+            <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">spline_smooth_operator</span> <span class="o">@</span> <span class="n">stretch</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="s2">&quot;fro&quot;</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="p">)</span>
+        <span class="n">sparsity_term</span> <span class="o">=</span> <span class="n">eta</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">components</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">residual_term</span> <span class="o">+</span> <span class="n">regularization_term</span> <span class="o">+</span> <span class="n">sparsity_term</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_cubic_largest_real_root</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Solves x^3 + p*x + q = 0 element-wise for matrices, returning the</span>
+<span class="sd">    largest real root.&quot;&quot;&quot;</span>
+    <span class="c1"># Handle special case where q == 0</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+        <span class="n">q</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">p</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="p">)</span>  <span class="c1"># q=0 case</span>
+
+    <span class="c1"># Compute discriminant</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="p">(</span><span class="n">q</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">p</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span>
+
+    <span class="c1"># Compute square root of delta safely</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">delta</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">delta</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">delta</span><span class="p">))</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span><span class="p">)</span>
+    <span class="c1"># TODO: this line causes a warning but results seem correct</span>
+
+    <span class="c1"># Compute cube roots safely</span>
+    <span class="n">a1</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">q</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">d</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">a2</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">q</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">d</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+
+    <span class="c1"># Compute cube roots of unity</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1</span><span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+
+    <span class="c1"># Compute the three possible roots (element-wise)</span>
+    <span class="n">y1</span> <span class="o">=</span> <span class="n">a1</span> <span class="o">+</span> <span class="n">a2</span>
+    <span class="n">y2</span> <span class="o">=</span> <span class="n">w</span> <span class="o">*</span> <span class="n">a1</span> <span class="o">+</span> <span class="n">w</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">a2</span>
+    <span class="n">y3</span> <span class="o">=</span> <span class="n">w</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">a1</span> <span class="o">+</span> <span class="n">w</span> <span class="o">*</span> <span class="n">a2</span>
+
+    <span class="c1"># Take the largest real root element-wise when delta &lt; 0</span>
+    <span class="n">r_roots</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">y1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">y2</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">y3</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">r_roots</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="n">delta</span> <span class="o">&lt;</span> <span class="mi">0</span>
+    <span class="p">)</span>  <span class="c1"># Keep only real roots when delta &lt; 0</span>
+
+    <span class="k">return</span> <span class="n">y</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_reconstruct_matrix</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">stretch</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Construct the approximation of the source matrix corresponding to</span>
+<span class="sd">    the given components, weights, and stretch factors.</span>
+
+<span class="sd">    Each component profile is stretched, interpolated to fractional positions,</span>
+<span class="sd">    weighted per signal, and summed to form the reconstruction.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    components : (signal_len, n_components) array</span>
+<span class="sd">    weights    : (n_components, n_signals) array</span>
+<span class="sd">    stretch    : (n_components, n_signals) array</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    reconstructed_matrix : (signal_len, n_signals) array</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">signal_len</span> <span class="o">=</span> <span class="n">components</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">n_components</span> <span class="o">=</span> <span class="n">components</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">n_signals</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">reconstructed_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">signal_len</span><span class="p">,</span> <span class="n">n_signals</span><span class="p">))</span>
+    <span class="n">sample_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">signal_len</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_components</span><span class="p">):</span>  <span class="c1"># loop over components</span>
+        <span class="n">reconstructed_matrix</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span>
+                <span class="n">sample_indices</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+                <span class="o">/</span> <span class="n">stretch</span><span class="p">[</span><span class="n">comp</span><span class="p">][</span>
+                    <span class="kc">None</span><span class="p">,</span> <span class="p">:</span>
+                <span class="p">],</span>  <span class="c1"># fractional positions (signal_len, n_signals)</span>
+                <span class="n">sample_indices</span><span class="p">,</span>  <span class="c1"># (signal_len,)</span>
+                <span class="n">components</span><span class="p">[:,</span> <span class="n">comp</span><span class="p">],</span>  <span class="c1"># component profile (signal_len,)</span>
+                <span class="n">left</span><span class="o">=</span><span class="n">components</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">comp</span><span class="p">],</span>
+                <span class="n">right</span><span class="o">=</span><span class="n">components</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">comp</span><span class="p">],</span>
+            <span class="p">)</span>
+            <span class="o">*</span> <span class="n">weights</span><span class="p">[</span><span class="n">comp</span><span class="p">][</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>  <span class="c1"># broadcast (n_signals,) over rows</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">reconstructed_matrix</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, The Trustees of Columbia University in the City of New York.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,91 +1,56 @@
-Welcome to SNMF's Documentation!
-====================================
+#######
+|title|
+#######
 
-``SNMF``: This library implements the stretched non negative matrix factorization (sNMF) and sparse stretched NMF
-(ssNMF) algorithms described in the paper "Stretched Non-negative Matrix Factorization" by Ran Gu et al. (2023),
-which is referenced under the Citation section below.
+.. |title| replace:: diffpy.stretched-nmf documentation
 
-This algorithm is designed to do an NMF factorization on a set of signals ignoring any uniform stretching of the signal
-on the independent variable axis. For example, for powder diffraction data taken from samples containing multiple
-chemical phases where the measurements were done at different temperatures and the materials were undergoing thermal
-expansion.
+``diffpy.stretched-nmf`` - A python package implementing the stretched NMF algorithm.
 
-Introduction
-++++++++++++
+| Software version |release|
+| Last updated |today|.
 
-``snmf`` is a Python package that increases the insight one can obtain from a measured series time-dependent signals
-through applying the stretched nonnegative matrix factorization and spare stretched nonnegative matrix factorization
-algorithms. The package seeks to answer the question: "What are the structural signals composing my measured signal at
-each moment in time?"
+===============
+Getting started
+===============
 
-One approach is to take the conventional nonnegative matrix factorization model and extend it by introducing a
-stretching factor matrix that accounts for isotropic stretching of measured signals and returns components that explain
-variability beyond this stretching. Conventional nonnegative matrix factorization (nmf) obtains component signals and
-the weightings of the component signals at each moment in time from a series of data. However, this model assumes the
-components themselves are constant in time, making this model unable to capture the changing of the components
-themselves.
+Welcome to the ``diffpy.stretched-nmf`` documentation!
 
-``snmf`` consider components that change with time by introducing a stretching factor for each component at each moment
-in time that isotropically stretches the component signals.The algorithm will attempt to find three matrices, a
-"component" matrix that stores the component signals, a "stretching factor" matrix that stores the stretching factors of
-the components at each moment in time, and a "weights" matrix that stores the weights of each component at each moment
-in time. ``snmf`` will then plot the components, stretching factors, and weights.
+To get started, please visit the :ref:`Getting started <getting-started>` page.
 
-One import use case of ``snmf`` is for powder diffraction data taken from samples containing multiple
-chemical phases where the measurements were done at different temperatures and the materials were undergoing thermal
-expansion. The key advantage of ``snmf`` is that it accurately reflects the isotropic change of the atomic distances
-within the chemical phases through its addition of stretching factors.
-
-It is important to note that the user must specify the number of component signals to obtain from the experimental data.
-Non-physical results may be obtained if the number of anticipated component signals is too high.
-
-Citation
---------
-
-If you use this program for a scientific research that leads
-to publication, we ask that you acknowledge use of the program
-by citing the following paper in your publication:
-
-   Ran Gu, Yevgeny Rakita, Ling Lan, Zach Thatcher, Gabrielle E. Kamm, Daniel O’Nolan, Brennan Mcbride, Allison Wustrow, James R. Neilson, Karena W. Chapman, Qiang Du, and Simon J. L. Billinge,
-   `Stretched Non-negative Matrix Factorization
-   <https://doi.org/10.1038/s41524-024-01377-5>`__,
-   *npj Comput Mater* **10**, 193 (2024).
-
-
+=======
 Authors
--------
+=======
 
-``snmf`` implements the algorithms described in ...., developed by members of the Billinge Group at
-Columbia University, Brookhaven National Laboratory, Stony Brook University, Nankai University, and Colorado State
-University including Ran Gu, Yevgeny Rakita, Ling Lan, Zach Thatcher, Gabrielle E. Kamm, Daniel O'Nolan, Brennan Mcbride,
-Jame R. Neilson, Karena W. Chapman, Qiang Du, and Simon J. L. Billinge.
+``diffpy.stretched-nmf`` is developed by Simon Billinge, John Halloran, Billinge Group members. The maintainer for this project is Simon Billinge. For a detailed list of contributors see
+https://github.com/diffpy/diffpy.stretched-nmf/graphs/contributors.
 
-This software implementation was developed by members of the Billinge Group at Columbia University and Brookhaven
-National Laboratory including Ran Gu, Adeolu Ajayi, Qiang Du, and Simon J. L. Billinge.
+============
+Installation
+============
 
-For a detailed list of contributors, check `here
-<https://github.com/diffpy/diffpy.snmf/graphs/contributors>`_.
+See the `README <https://github.com/diffpy/diffpy.stretched-nmf#installation>`_
+file included with the distribution.
 
-To get started, please go to :ref:`quick_start`
+================
+Acknowledgements
+================
 
+``diffpy.stretched-nmf`` is built and maintained with `scikit-package <https://scikit-package.github.io/scikit-package/>`_.
+
+=================
+Table of contents
+=================
 .. toctree::
-   :maxdepth: 3
-   :hidden:
+   :maxdepth: 2
 
-   quickstart
-
-.. toctree::
-   :maxdepth: 4
-   :caption: Contents:
-
-   license
+   getting-started
+   api/snmf_class
    release
-   Package API <api/diffpy.snmf>
+   license
 
-.. include:: ../../CHANGELOG.rst
-
+=======
 Indices
--------
+=======
 
 * :ref:`genindex`
 * :ref:`search`

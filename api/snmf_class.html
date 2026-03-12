@@ -1,0 +1,396 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SNMFOptimizer &mdash; diffpy.stretched-nmf 0.2.0rc1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=e7a4f63b"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=cca77546"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Release notes" href="../release.html" />
+    <link rel="prev" title="Getting started" href="../getting-started.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            diffpy.stretched-nmf
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">SNMFOptimizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.stretch_"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.stretch_</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.components_"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.components_</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.weights_"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.weights_</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.rho"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.rho</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.eta"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.eta</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.max_iter"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.max_iter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.min_iter"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.min_iter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.tol"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.tol</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_components"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.n_components</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.random_state"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.random_state</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_components_"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.n_components_</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.signal_length_"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.signal_length_</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_signals_"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.n_signals_</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.objective_function_"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.objective_function_</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.objective_difference_"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.objective_difference_</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_iter_"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.n_iter_</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.__init__"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.fit"><code class="docutils literal notranslate"><span class="pre">SNMFOptimizer.fit()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../release.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">diffpy.stretched-nmf</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">SNMFOptimizer</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/diffpy/diffpy.stretched-nmf/blob/main/docs/source/api/snmf_class.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="snmfoptimizer">
+<h1>SNMFOptimizer<a class="headerlink" href="#snmfoptimizer" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">diffpy.stretched_nmf.snmf_class.</span></span><span class="sig-name descname"><span class="pre">SNMFOptimizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_components</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5e-07</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plots</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffpy/stretched_nmf/snmf_class.html#SNMFOptimizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>An implementation of stretched NMF, including sparse stretched
+NMF.</p>
+<p>Instantiate the estimator with hyperparameters, then call <code class="docutils literal notranslate"><span class="pre">fit</span></code> to
+optimize model factors. Trailing underscores indicate that an attribute
+was determined during the fit process.</p>
+<p>For more information on sNMF, please reference:
+Gu, R., Rakita, Y., Lan, L. et al.
+Stretched non-negative matrix factorization.
+npj Comput Mater 10, 193 (2024) <a class="reference external" href="https://doi.org/10.1038/s41524-024-01377-5">https://doi.org/10.1038/s41524-024-01377-5</a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.stretch_">
+<span class="sig-name descname"><span class="pre">stretch_</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.stretch_" title="Link to this definition"></a></dt>
+<dd><p>The best guess (or while running, the current guess) for the stretching
+factor matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)">numpy.ndarray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.components_">
+<span class="sig-name descname"><span class="pre">components_</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.components_" title="Link to this definition"></a></dt>
+<dd><p>The best guess (or while running, the current guess) for the matrix of
+component intensities.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)">numpy.ndarray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.weights_">
+<span class="sig-name descname"><span class="pre">weights_</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.weights_" title="Link to this definition"></a></dt>
+<dd><p>The best guess (or while running, the current guess) for the matrix of
+component weights.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.4)">numpy.ndarray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.rho">
+<span class="sig-name descname"><span class="pre">rho</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.rho" title="Link to this definition"></a></dt>
+<dd><p>The stretching factor that influences the decomposition. Zero
+corresponds to no stretching present. Relatively insensitive and
+typically adjusted in powers of 10.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.eta">
+<span class="sig-name descname"><span class="pre">eta</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.eta" title="Link to this definition"></a></dt>
+<dd><p>The sparsity factor that influences the decomposition. Should be set
+to zero for non-sparse data such as PDF. Can be used to improve
+results for sparse data such as XRD, but due to instability, should
+be used only after first selecting the best value for rho. Suggested
+adjustment is by powers of 2.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.max_iter">
+<span class="sig-name descname"><span class="pre">max_iter</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.max_iter" title="Link to this definition"></a></dt>
+<dd><p>The maximum number of times to update each of stretch, components,
+and weights before stopping the optimization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.min_iter">
+<span class="sig-name descname"><span class="pre">min_iter</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.min_iter" title="Link to this definition"></a></dt>
+<dd><p>The minimum number of times to update each of stretch, components,
+and weights before terminating the optimization due to low/no
+improvement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.tol">
+<span class="sig-name descname"><span class="pre">tol</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.tol" title="Link to this definition"></a></dt>
+<dd><p>The convergence threshold. This is the minimum fractional improvement
+in the objective function to allow without terminating the
+optimization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_components">
+<span class="sig-name descname"><span class="pre">n_components</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_components" title="Link to this definition"></a></dt>
+<dd><p>The referred number of components when <code class="docutils literal notranslate"><span class="pre">init_weights</span></code> is not
+provided to <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.random_state">
+<span class="sig-name descname"><span class="pre">random_state</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.random_state" title="Link to this definition"></a></dt>
+<dd><p>The seed for the initial guesses at the matrices (stretch, components,
+and weights) created by the decomposition.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_components_">
+<span class="sig-name descname"><span class="pre">n_components_</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_components_" title="Link to this definition"></a></dt>
+<dd><p>The learned number of components from initialization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.signal_length_">
+<span class="sig-name descname"><span class="pre">signal_length_</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.signal_length_" title="Link to this definition"></a></dt>
+<dd><p>The number of rows in the fitted source matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_signals_">
+<span class="sig-name descname"><span class="pre">n_signals_</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_signals_" title="Link to this definition"></a></dt>
+<dd><p>The number of columns in the fitted source matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.objective_function_">
+<span class="sig-name descname"><span class="pre">objective_function_</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.objective_function_" title="Link to this definition"></a></dt>
+<dd><p>Current objective value from the most recent update.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.objective_difference_">
+<span class="sig-name descname"><span class="pre">objective_difference_</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.objective_difference_" title="Link to this definition"></a></dt>
+<dd><p>The change in the objective function value since the last update. A
+positive value means that the result improved.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_iter_">
+<span class="sig-name descname"><span class="pre">n_iter_</span></span><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.n_iter_" title="Link to this definition"></a></dt>
+<dd><p>The number of outer iterations completed in <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_components</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5e-07</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plots</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffpy/stretched_nmf/snmf_class.html#SNMFOptimizer.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize an instance of sNMF with estimator
+hyperparameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_components</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><em>optional</em>) – The number of components to extract when <code class="docutils literal notranslate"><span class="pre">init_weights</span></code> is not
+provided to <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p></li>
+<li><p><strong>max_iter</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The maximum number of times to update each of A, X, and Y before
+stopping the optimization. Optional.</p></li>
+<li><p><strong>min_iter</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The minimum number of outer-loop iterations before convergence
+checks can stop optimization. Optional.</p></li>
+<li><p><strong>tol</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – The convergence threshold. This is the minimum fractional
+improvement in the objective function to allow without terminating
+the optimization. Note that a minimum of 20 updates are run before
+this parameter is checked. Optional.</p></li>
+<li><p><strong>rho</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – The stretching regularization hyperparameter. Zero corresponds to
+no stretching.</p></li>
+<li><p><strong>eta</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – The sparsity regularization hyperparameter. Turn off for non-sparse
+data such as PDF.</p></li>
+<li><p><strong>random_state</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The seed for the initial guesses at the matrices (A, X, and Y)
+created by the decomposition. Optional.</p></li>
+<li><p><strong>show_plots</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Enables plotting at each step of the decomposition. Optional.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="diffpy.stretched_nmf.snmf_class.SNMFOptimizer.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_matrix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_components</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_stretch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/diffpy/stretched_nmf/snmf_class.html#SNMFOptimizer.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#diffpy.stretched_nmf.snmf_class.SNMFOptimizer.fit" title="Link to this definition"></a></dt>
+<dd><p>Run the sNMF optimization on <code class="docutils literal notranslate"><span class="pre">source_matrix</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source_matrix</strong> (<em>ndarray</em><em> of </em><em>shape</em><em> (</em><em>signal_length</em><em>, </em><em>n_signals</em><em>)</em>) – The source data matrix to decompose.</p></li>
+<li><p><strong>init_weights</strong> (<em>ndarray</em><em>, </em><em>optional</em>) – The initial weights matrix of shape
+<code class="docutils literal notranslate"><span class="pre">(n_components,</span> <span class="pre">n_signals)</span></code>.</p></li>
+<li><p><strong>init_components</strong> (<em>ndarray</em><em>, </em><em>optional</em>) – Optional initial components matrix of shape
+<code class="docutils literal notranslate"><span class="pre">(signal_length,</span> <span class="pre">n_components)</span></code>.</p></li>
+<li><p><strong>init_stretch</strong> (<em>ndarray</em><em>, </em><em>optional</em>) – The initial stretch matrix of shape
+<code class="docutils literal notranslate"><span class="pre">(n_components,</span> <span class="pre">n_signals)</span></code>.</p></li>
+<li><p><strong>reset</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether to reinitialize model factors before fitting. If <code class="docutils literal notranslate"><span class="pre">False</span></code>,
+the previous factor matrices are reused.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../getting-started.html" class="btn btn-neutral float-left" title="Getting started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../release.html" class="btn btn-neutral float-right" title="Release notes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, The Trustees of Columbia University in the City of New York.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,219 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Getting started &mdash; diffpy.stretched-nmf 0.2.0rc1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=e7a4f63b"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=cca77546"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SNMFOptimizer" href="api/snmf_class.html" />
+    <link rel="prev" title="diffpy.stretched-nmf documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            diffpy.stretched-nmf
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#quick-check">Quick check</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-usage">Basic usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#notes">Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#xrd-example">XRD example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#next-steps">Next steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/snmf_class.html">SNMFOptimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release.html">Release notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">diffpy.stretched-nmf</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Getting started</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/diffpy/diffpy.stretched-nmf/blob/main/docs/source/getting-started.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="getting-started">
+<span id="id1"></span><h1>Getting started<a class="headerlink" href="#getting-started" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">diffpy.stretched-nmf</span></code> implements the stretched NMF algorithm for factorizing signal
+sets while accounting for uniform stretching along the independent axis.</p>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>The preferred method is conda:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>config<span class="w"> </span>--add<span class="w"> </span>channels<span class="w"> </span>conda-forge
+conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>diffpy.stretched-nmf_env<span class="w"> </span>diffpy.stretched-nmf
+conda<span class="w"> </span>activate<span class="w"> </span>diffpy.stretched-nmf_env
+</pre></div>
+</div>
+<p>Alternatively, install from PyPI with pip:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>diffpy.stretched-nmf
+</pre></div>
+</div>
+<p>For source installs (after cloning the repo):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+<section id="quick-check">
+<h2>Quick check<a class="headerlink" href="#quick-check" title="Link to this heading"></a></h2>
+<p>Verify the CLI and Python import:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>diffpy.stretched-nmf<span class="w"> </span>--version
+python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import diffpy.stretched_nmf; print(diffpy.stretched_nmf.__version__)&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="basic-usage">
+<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Link to this heading"></a></h2>
+<p>The main entry point is the <code class="docutils literal notranslate"><span class="pre">SNMFOptimizer</span></code> class. Create an
+<code class="docutils literal notranslate"><span class="pre">SNMFOptimizer</span></code> with hyperparameters, then pass the source matrix to
+<code class="docutils literal notranslate"><span class="pre">fit</span></code>. The source matrix shape is
+<code class="docutils literal notranslate"><span class="pre">(length_of_signal,</span> <span class="pre">number_of_signals)</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">diffpy.stretched_nmf.snmf_class</span><span class="w"> </span><span class="kn">import</span> <span class="n">SNMFOptimizer</span>
+
+<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span>
+<span class="n">source_matrix</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">random</span><span class="p">((</span><span class="mi">300</span><span class="p">,</span> <span class="mi">24</span><span class="p">))</span>  <span class="c1"># (signal_length, n_signals)</span>
+
+<span class="n">snmf</span> <span class="o">=</span> <span class="n">SNMFOptimizer</span><span class="p">(</span>
+    <span class="n">n_components</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">max_iter</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+    <span class="n">min_iter</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">tol</span><span class="o">=</span><span class="mf">5e-7</span><span class="p">,</span>
+    <span class="n">rho</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">eta</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">random_state</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
+    <span class="n">show_plots</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">snmf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">source_matrix</span><span class="o">=</span><span class="n">source_matrix</span><span class="p">,</span> <span class="n">reset</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">components</span> <span class="o">=</span> <span class="n">snmf</span><span class="o">.</span><span class="n">components_</span>
+<span class="n">weights</span> <span class="o">=</span> <span class="n">snmf</span><span class="o">.</span><span class="n">weights_</span>
+<span class="n">stretch</span> <span class="o">=</span> <span class="n">snmf</span><span class="o">.</span><span class="n">stretch_</span>
+</pre></div>
+</div>
+</section>
+<section id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">rho</span></code> controls the stretching penalty (set to <code class="docutils literal notranslate"><span class="pre">0</span></code> for no stretching).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">eta</span></code> controls sparsity (start at <code class="docutils literal notranslate"><span class="pre">0</span></code> and tune after selecting <code class="docutils literal notranslate"><span class="pre">rho</span></code>).</p></li>
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">reset=False</span></code> only when you want to continue from the current solution.</p></li>
+</ul>
+</section>
+<section id="xrd-example">
+<h2>XRD example<a class="headerlink" href="#xrd-example" title="Link to this heading"></a></h2>
+<p>A complete real-data example is included in
+<code class="docutils literal notranslate"><span class="pre">docs/examples/XRD_MgMnO_YCl_real.py</span></code>. It reads the input matrices from
+<code class="docutils literal notranslate"><span class="pre">docs/examples/data/XRD_MgMnO_YCl_real</span></code>.</p>
+<p>Run it from the repository root:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>docs/examples/XRD_MgMnO_YCl_real.py
+</pre></div>
+</div>
+<p>The script runs a tuned XRD fit and writes
+<code class="docutils literal notranslate"><span class="pre">my_norm_components.txt</span></code>, <code class="docutils literal notranslate"><span class="pre">my_norm_weights.txt</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">my_norm_stretch.txt</span></code> to the current working directory.</p>
+<figure class="align-center" id="id2">
+<a class="reference internal image-reference" href="_images/mid-optimization.png"><img alt="Preview from the show_plots interface before convergence" src="_images/mid-optimization.png" style="width: 85%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Preview from the <code class="docutils literal notranslate"><span class="pre">show_plots</span></code> interface from before the optimization has settled down.</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<figure class="align-center" id="id3">
+<a class="reference internal image-reference" href="_images/xrd-final-outputs.png"><img alt="Final normalized outputs for components, weights, and stretch" src="_images/xrd-final-outputs.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Final outputs: normalized components, normalized weights, and normalized stretch shown side by side.</span><a class="headerlink" href="#id3" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+<section id="next-steps">
+<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading"></a></h2>
+<p>Browse the rest of the docs for release notes and license information.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="diffpy.stretched-nmf documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api/snmf_class.html" class="btn btn-neutral float-right" title="SNMFOptimizer" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, The Trustees of Columbia University in the City of New York.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
