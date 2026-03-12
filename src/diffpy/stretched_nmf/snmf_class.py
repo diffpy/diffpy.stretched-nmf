@@ -354,13 +354,13 @@ class SNMFOptimizer:
             #     f"{self.objective_function:.5e}"
             # )
             self._objective_history.append(self.objective_function)
-            self.objective_log = [
+            self.objective_log.append(
                 {
                     "step": "c_norm",
                     "objective": self.objective_function,
                     "timestamp": time.time(),
                 }
-            ]
+            )
             self.objective_difference = (
                 self._objective_history[-2] - self._objective_history[-1]
             )
@@ -386,13 +386,13 @@ class SNMFOptimizer:
             self.update_components()
             self.residuals = self.get_residual_matrix()
             self.objective_function = self.get_objective_function()
-            self.objective_log = [
+            self.objective_log.append(
                 {
                     "step": "c",
                     "objective": self.objective_function,
                     "timestamp": time.time(),
                 }
-            ]
+            )
             # print(
             #     f"Objective function after update_components: "
             #     f"{self.objective_function:.5e}"
@@ -424,13 +424,13 @@ class SNMFOptimizer:
             #     f"{self.objective_function:.5e}"
             # )
             self._objective_history.append(self.objective_function)
-            self.objective_log = [
+            self.objective_log.append(
                 {
                     "step": "w",
                     "objective": self.objective_function,
                     "timestamp": time.time(),
                 }
-            ]
+            )
 
             self.objective_difference = (
                 self._objective_history[-2] - self._objective_history[-1]
@@ -469,13 +469,13 @@ class SNMFOptimizer:
             #     f"{self.objective_function:.5e}"
             # )
             self._objective_history.append(self.objective_function)
-            self.objective_log = [
+            self.objective_log.append(
                 {
                     "step": "s",
                     "objective": self.objective_function,
                     "timestamp": time.time(),
                 }
-            ]
+            )
             self.objective_difference = (
                 self._objective_history[-2] - self._objective_history[-1]
             )
