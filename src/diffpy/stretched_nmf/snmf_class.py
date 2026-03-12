@@ -269,8 +269,9 @@ class SNMFOptimizer:
         )
         if self.verbose:
             print(
-                f"Start, Objective function: {self.objective_function:.5e}"
-                f", Obj - reg/sparse: {obj_diff:.5e}"
+                f"\n--- Start ---"
+                f"\nTotal Objective   : {self.objective_function:.5e}"
+                f"\nBase Obj (No Reg) : {obj_diff:.5e}"
             )
 
         # Main optimization loop
@@ -300,8 +301,9 @@ class SNMFOptimizer:
                     f"\n--- Iteration {self.outiter} ---"
                     f"\nTotal Objective   : {self.objective_function:.5e}"
                     f"\nBase Obj (No Reg) : {obj_diff:.5e}"
-                    f"\nConvergence Check : Δ {self.objective_difference:.5e}"
-                    f" < {convergence_threshold:.5e} (Threshold)\n"
+                    "\nConvergence Check : Δ "
+                    f"({self.objective_difference:.2e})"
+                    f" < Threshold ({convergence_threshold:.2e})\n"
                 )
             if (
                 self.objective_difference < convergence_threshold
