@@ -218,6 +218,7 @@ class SNMFOptimizer:
             [1, -2, 1],
             offsets=[0, 1, 2],
             shape=(self.n_signals_ - 2, self.n_signals_),
+            dtype=float,
         )
 
     def fit(
@@ -306,12 +307,12 @@ class SNMFOptimizer:
             self.weights_.copy(),
             self.stretch_.copy(),
         ]
-        self.objective_difference = None
+        self.objective_difference_ = None
         self.objective_log = [
             {
                 "step": "start",
                 "iteration": 0,
-                "objective": self.objective_function,
+                "objective": self.objective_function_,
                 "timestamp": time.time(),
             }
         ]
@@ -334,12 +335,12 @@ class SNMFOptimizer:
             np.sqrt(self.components_)
         )  # Square root penalty
         base_obj = (
-            self.objective_function - regularization_term - sparsity_term
+            self.objective_function_ - regularization_term - sparsity_term
         )
         if self.verbose:
             print(
                 f"\n--- Start ---"
-                f"\nTotal Objective   : {self.objective_function:.5e}"
+                f"\nTotal Objective   : {self.objective_function_:.5e}"
                 f"\nBase Obj (No Reg) : {base_obj:.5e}"
             )
 
@@ -361,22 +362,22 @@ class SNMFOptimizer:
                 np.sqrt(self.components_)
             )  # Square root penalty
             base_obj = (
-                self.objective_function - regularization_term - sparsity_term
+                self.objective_function_ - regularization_term - sparsity_term
             )
-            convergence_threshold = self.objective_function * self.tol
+            convergence_threshold = self.objective_function_ * self.tol
             # Convergence check: Stop if diffun is small
             # and at least min_iter iterations have passed
             if self.verbose:
                 print(
-                    f"\n--- Iteration {self.outiter} ---"
-                    f"\nTotal Objective   : {self.objective_function:.5e}"
+                    f"\n--- Iteration {self._outer_iter} ---"
+                    f"\nTotal Objective   : {self.objective_function_:.5e}"
                     f"\nBase Obj (No Reg) : {base_obj:.5e}"
                     "\nConvergence Check : Δ "
-                    f"({self.objective_difference:.2e})"
+                    f"({self.objective_difference_:.2e})"
                     f" < Threshold ({convergence_threshold:.2e})\n"
                 )
             if (
-                self.objective_difference < convergence_threshold
+                self.objective_difference_ < convergence_threshold
                 and outiter >= self.min_iter
             ):
                 self.converged_ = True
@@ -427,13 +428,14 @@ class SNMFOptimizer:
                 {
                     "step": "c_norm",
                     "iteration": outiter,
-                    "objective": self.objective_function,
+                    "objective": self.objective_function_,
                     "timestamp": time.time(),
                 }
             )
-            self.objective_difference = (
+            self.objective_difference_ = (
                 self.objective_log[-2]["objective"]
                 - self.objective_log[-1]["objective"]
+            )
             if self._plotter is not None:
                 self._plotter.update(
                     components=self.components_,
@@ -441,13 +443,13 @@ class SNMFOptimizer:
                     stretch=self.stretch_,
                     update_tag="normalize components",
                 )
-            convergence_threshold = self.objective_function * self.tol
+            convergence_threshold = self.objective_function_ * self.tol
             if self.verbose:
                 print(
                     f"\n--- Iteration {outiter} after normalization---"
-                    f"\nTotal Objective   : {self.objective_function:.5e}"
+                    f"\nTotal Objective   : {self.objective_function_:.5e}"
                     "\nConvergence Check : Δ "
-                    f"({self.objective_difference:.2e})"
+                    f"({self.objective_difference_:.2e})"
                     f" < Threshold ({convergence_threshold:.2e})\n"
                 )
             if (
@@ -468,12 +470,12 @@ class SNMFOptimizer:
             self.objective_log.append(
                 {
                     "step": "c",
-                    "iteration": self.outiter,
-                    "objective": self.objective_function,
+                    "iteration": self._outer_iter,
+                    "objective": self.objective_function_,
                     "timestamp": time.time(),
                 }
             )
-            self.objective_difference = (
+            self.objective_difference_ = (
                 self.objective_log[-2]["objective"]
                 - self.objective_log[-1]["objective"]
             )
@@ -498,13 +500,13 @@ class SNMFOptimizer:
             self.objective_log.append(
                 {
                     "step": "w",
-                    "iteration": self.outiter,
-                    "objective": self.objective_function,
+                    "iteration": self._outer_iter,
+                    "objective": self.objective_function_,
                     "timestamp": time.time(),
                 }
             )
 
-            self.objective_difference = (
+            self.objective_difference_ = (
                 self.objective_log[-2]["objective"]
                 - self.objective_log[-1]["objective"]
             )
@@ -541,12 +543,12 @@ class SNMFOptimizer:
             self.objective_log.append(
                 {
                     "step": "s",
-                    "iteration": self.outiter,
-                    "objective": self.objective_function,
+                    "iteration": self._outer_iter,
+                    "objective": self.objective_function_,
                     "timestamp": time.time(),
                 }
             )
-            self.objective_difference = (
+            self.objective_difference_ = (
                 self.objective_log[-2]["objective"]
                 - self.objective_log[-1]["objective"]
             )
@@ -914,8 +916,9 @@ class SNMFOptimizer:
             )
             self.components_ = mask * self.components_
 
-            objective_improvement = self.objective_log[-1]["objective"]
-              - self._get_objective_function(
+            objective_improvement = self.objective_log[-1][
+                "objective"
+            ] - self._get_objective_function(
                 residuals=self._get_residual_matrix()
             )
 
