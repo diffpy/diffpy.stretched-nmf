@@ -264,14 +264,14 @@ class SNMFOptimizer:
         sparsity_term = self.eta * np.sum(
             np.sqrt(self.components_)
         )  # Square root penalty
-        obj_diff = (
+        base_obj = (
             self.objective_function - regularization_term - sparsity_term
         )
         if self.verbose:
             print(
                 f"\n--- Start ---"
                 f"\nTotal Objective   : {self.objective_function:.5e}"
-                f"\nBase Obj (No Reg) : {obj_diff:.5e}"
+                f"\nBase Obj (No Reg) : {base_obj:.5e}"
             )
 
         # Main optimization loop
@@ -290,7 +290,7 @@ class SNMFOptimizer:
             sparsity_term = self.eta * np.sum(
                 np.sqrt(self.components_)
             )  # Square root penalty
-            obj_diff = (
+            base_obj = (
                 self.objective_function - regularization_term - sparsity_term
             )
             convergence_threshold = self.objective_function * self.tol
@@ -300,7 +300,7 @@ class SNMFOptimizer:
                 print(
                     f"\n--- Iteration {self.outiter} ---"
                     f"\nTotal Objective   : {self.objective_function:.5e}"
-                    f"\nBase Obj (No Reg) : {obj_diff:.5e}"
+                    f"\nBase Obj (No Reg) : {base_obj:.5e}"
                     "\nConvergence Check : Δ "
                     f"({self.objective_difference:.2e})"
                     f" < Threshold ({convergence_threshold:.2e})\n"
@@ -367,15 +367,24 @@ class SNMFOptimizer:
                     stretch=self.stretch_,
                     update_tag="normalize components",
                 )
+            convergence_threshold = self.objective_function * self.tol
+            if self.verbose:
+                print(
+                    f"\n--- Iteration {outiter} after normalization---"
+                    f"\nTotal Objective   : {self.objective_function:.5e}"
+                    "\nConvergence Check : Δ "
+                    f"({self.objective_difference:.2e})"
+                    f" < Threshold ({convergence_threshold:.2e})\n"
+                )
             if (
-                self.objective_difference < self.objective_function * self.tol
+                self.objective_difference < convergence_threshold
                 and outiter >= 7
             ):
                 break
 
     def outer_loop(self):
         if self.verbose:
-            print("Updating components and weights in outer loop...")
+            print("Updating components and weights...")
         for iter in range(4):
             self.iter = iter
             self._prev_grad_components = self._grad_components.copy()
