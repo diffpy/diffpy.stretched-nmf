@@ -84,7 +84,7 @@ class SNMFOptimizer:
         eta=0,
         random_state=None,
         show_plots=False,
-        verbose=True,
+        verbose=False,
     ):
         """Initialize an instance of sNMF with estimator
         hyperparameters.
