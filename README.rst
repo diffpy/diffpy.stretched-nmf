@@ -8,6 +8,8 @@
         :target: https://diffpy.github.io/diffpy.stretched-nmf
         :height: 100px
 
+.. _online documentation: https://diffpy.github.io/diffpy.stretched-nmf
+
 |PyPI| |Forge| |PythonVersion| |PR|
 
 |CI| |Codecov| |Black| |Tracking|
@@ -43,17 +45,20 @@ on the independent variable axis. For example, for powder diffraction data taken
 chemical phases where the measurements were done at different temperatures and the materials were undergoing thermal
 expansion.
 
-For more information about the diffpy.stretched-nmf library, please consult our `online documentation <https://diffpy.github.io/diffpy.stretched-nmf>`_.
+For more information about the diffpy.stretched-nmf library, please consult our
+`online documentation`_.
 
 Citation
 --------
 
 If you use diffpy.stretched-nmf in a scientific publication, we would like you to cite this package as
 
-        Ran Gu, Yevgeny Rakita, Ling Lan, Zach Thatcher, Gabrielle E. Kamm, Daniel O’Nolan, Brennan Mcbride, Allison Wustrow, James R. Neilson, Karena W. Chapman, Qiang Du, and Simon J. L. Billinge,
-   `Stretched Non-negative Matrix Factorization
-   <https://doi.org/10.1038/s41524-024-01377-5>`__,
-   *npj Comput Mater* **10**, 193 (2024).
+    Ran Gu, Yevgeny Rakita, Ling Lan, Zach Thatcher, Gabrielle E. Kamm,
+    Daniel O'Nolan, Brennan McBride, Allison Wustrow, James R. Neilson,
+    Karena W. Chapman, Qiang Du, and Simon J. L. Billinge,
+    `Stretched Non-negative Matrix Factorization
+    <https://doi.org/10.1038/s41524-024-01377-5>`__,
+    *npj Comput Mater* **10**, 193 (2024).
 
 Installation
 ------------
@@ -85,7 +90,7 @@ To view the basic usage and available commands, type ::
 Getting Started
 ---------------
 
-You may consult our `online documentation <https://diffpy.github.io/diffpy.stretched-nmf>`_ for tutorials and API references.
+You may consult our `online documentation`_ for tutorials and API references.
 
 Support and Contribute
 ----------------------
