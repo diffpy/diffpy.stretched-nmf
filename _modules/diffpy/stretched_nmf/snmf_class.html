@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>diffpy.stretched_nmf.snmf_class &mdash; diffpy.stretched-nmf 0.2.0rc1 documentation</title>
+  <title>diffpy.stretched_nmf.snmf_class &mdash; diffpy.stretched-nmf 0.2.0rc2 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
@@ -13,7 +13,7 @@
   
       <script src="../../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../../_static/documentation_options.js?v=e7a4f63b"></script>
+      <script src="../../../_static/documentation_options.js?v=c7156cd0"></script>
       <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -74,7 +74,9 @@
            <div itemprop="articleBody">
              
   <h1>Source code for diffpy.stretched_nmf.snmf_class</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvxpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cp</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">minimize</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.sparse</span><span class="w"> </span><span class="kn">import</span> <span class="n">coo_matrix</span><span class="p">,</span> <span class="n">diags</span>
@@ -162,6 +164,7 @@
         <span class="n">eta</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">show_plots</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize an instance of sNMF with estimator</span>
 <span class="sd">        hyperparameters.</span>
@@ -206,6 +209,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">=</span> <span class="n">eta</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">show_plots</span> <span class="o">=</span> <span class="n">show_plots</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random_state</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span> <span class="o">=</span> <span class="n">SNMFPlotter</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_plots</span> <span class="k">else</span> <span class="kc">None</span></div>
@@ -295,6 +299,7 @@
             <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
             <span class="n">offsets</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
             <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_signals_</span><span class="p">),</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
         <span class="p">)</span>
 
 <div class="viewcode-block" id="SNMFOptimizer.fit">
@@ -386,7 +391,14 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
         <span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;step&quot;</span><span class="p">:</span> <span class="s2">&quot;start&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;iteration&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="s2">&quot;objective&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">,</span>
+                <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+            <span class="p">}</span>
+        <span class="p">]</span>
 
         <span class="c1"># Set up tracking variables for _update_components()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_prev_components</span> <span class="o">=</span> <span class="kc">None</span>
@@ -405,13 +417,15 @@
         <span class="n">sparsity_term</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
             <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">)</span>
         <span class="p">)</span>  <span class="c1"># Square root penalty</span>
-        <span class="n">objective_without_penalty</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">base_obj</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">-</span> <span class="n">regularization_term</span> <span class="o">-</span> <span class="n">sparsity_term</span>
         <span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Start, Objective function: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;, Obj - reg/sparse: </span><span class="si">{</span><span class="n">objective_without_penalty</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">--- Start ---&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Total Objective   : </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Base Obj (No Reg) : </span><span class="si">{</span><span class="n">base_obj</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
 
         <span class="c1"># Main optimization loop</span>
         <span class="k">for</span> <span class="n">outiter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iter</span><span class="p">):</span>
@@ -430,35 +444,23 @@
             <span class="n">sparsity_term</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eta</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
                 <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components_</span><span class="p">)</span>
             <span class="p">)</span>  <span class="c1"># Square root penalty</span>
-            <span class="n">objective_without_penalty</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">base_obj</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">-</span> <span class="n">regularization_term</span> <span class="o">-</span> <span class="n">sparsity_term</span>
             <span class="p">)</span>
-            <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Obj fun: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">, &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Obj - reg/sparse: </span><span class="si">{</span><span class="n">objective_without_penalty</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">, &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Iter: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_outer_iter</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
-            <span class="n">obj_diff</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">objective_function</span> <span class="o">-</span> <span class="n">regularization_term</span> <span class="o">-</span> <span class="n">sparsity_term</span>
-            <span class="p">)</span>
-            <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Obj fun: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">, &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;, Obj - reg/sparse: </span><span class="si">{</span><span class="n">obj_diff</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Iter: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">outiter</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
-
+            <span class="n">convergence_threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
             <span class="c1"># Convergence check: Stop if diffun is small</span>
             <span class="c1"># and at least min_iter iterations have passed</span>
-            <span class="nb">print</span><span class="p">(</span>
-                <span class="s2">&quot;Checking if &quot;</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span><span class="p">,</span>
-                <span class="s2">&quot; &lt; &quot;</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">,</span>
-            <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">--- Iteration </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_outer_iter</span><span class="si">}</span><span class="s2"> ---&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Total Objective   : </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Base Obj (No Reg) : </span><span class="si">{</span><span class="n">base_obj</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Convergence Check : Δ &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">)&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot; &lt; Threshold (</span><span class="si">{</span><span class="n">convergence_threshold</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span>
-                <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">&lt;</span> <span class="n">convergence_threshold</span>
                 <span class="ow">and</span> <span class="n">outiter</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_iter</span>
             <span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">converged_</span> <span class="o">=</span> <span class="kc">True</span>
@@ -471,6 +473,8 @@
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_results</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Normalizing results after convergence...&quot;</span><span class="p">)</span>
         <span class="c1"># Select our best results for normalization</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_matrices_</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">weights_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_matrices_</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -504,13 +508,17 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_components</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">()</span>
-            <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Objective function after normalize_components: &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;step&quot;</span><span class="p">:</span> <span class="s2">&quot;c_norm&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;iteration&quot;</span><span class="p">:</span> <span class="n">outiter</span><span class="p">,</span>
+                    <span class="s2">&quot;objective&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">,</span>
+                    <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+                <span class="p">}</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
+                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
@@ -519,27 +527,41 @@
                     <span class="n">stretch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stretch_</span><span class="p">,</span>
                     <span class="n">update_tag</span><span class="o">=</span><span class="s2">&quot;normalize components&quot;</span><span class="p">,</span>
                 <span class="p">)</span>
+            <span class="n">convergence_threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">--- Iteration </span><span class="si">{</span><span class="n">outiter</span><span class="si">}</span><span class="s2"> after normalization---&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Total Objective   : </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Convergence Check : Δ &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">)&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot; &lt; Threshold (</span><span class="si">{</span><span class="n">convergence_threshold</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span>
-                <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">&lt;</span> <span class="n">convergence_threshold</span>
                 <span class="ow">and</span> <span class="n">outiter</span> <span class="o">&gt;=</span> <span class="mi">7</span>
             <span class="p">):</span>
                 <span class="k">break</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_outer_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Updating components and weights...&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">inner_iter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_inner_iter</span> <span class="o">=</span> <span class="n">inner_iter</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_prev_grad_components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grad_components</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_components</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">()</span>
-            <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Objective function after _update_components: &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;step&quot;</span><span class="p">:</span> <span class="s2">&quot;c&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;iteration&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outer_iter</span><span class="p">,</span>
+                    <span class="s2">&quot;objective&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">,</span>
+                    <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+                <span class="p">}</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
+                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span>
@@ -559,13 +581,18 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_weights</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">()</span>
-            <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Objective function after _update_weights: &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;step&quot;</span><span class="p">:</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;iteration&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outer_iter</span><span class="p">,</span>
+                    <span class="s2">&quot;objective&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">,</span>
+                    <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+                <span class="p">}</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">)</span>
+
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
+                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span>
@@ -583,10 +610,11 @@
                 <span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
+                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span>
                 <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">*</span> <span class="mf">1e-3</span>
             <span class="p">):</span>
                 <span class="k">break</span>
@@ -596,13 +624,17 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_stretch</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">residuals_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">()</span>
-            <span class="nb">print</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Objective function after _update_stretch: &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="si">:</span><span class="s2">.5e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;step&quot;</span><span class="p">:</span> <span class="s2">&quot;s&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;iteration&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_outer_iter</span><span class="p">,</span>
+                    <span class="s2">&quot;objective&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">,</span>
+                    <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+                <span class="p">}</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">objective_difference_</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
+                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;objective&quot;</span><span class="p">]</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">best_objective_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function_</span>
@@ -888,7 +920,12 @@
 
         <span class="c1"># Solve using a QP solver</span>
         <span class="n">prob</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">constraints</span><span class="p">)</span>
-        <span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">OSQP</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">prob</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span>
+            <span class="n">solver</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">OSQP</span><span class="p">,</span>
+            <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">polish</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># TODO keep? removes polish message</span>
+            <span class="c1"># solver_verbose=False</span>
+        <span class="p">)</span>
 
         <span class="c1"># Get the solution</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span>
@@ -898,6 +935,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_components</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Updates `components` using gradient-based optimization with</span>
 <span class="sd">        adaptive step size.&quot;&quot;&quot;</span>
+
         <span class="c1"># Compute stretched components using the interpolation function</span>
         <span class="n">stretched_components</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_compute_stretched_components</span><span class="p">()</span>
@@ -962,8 +1000,8 @@
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">components_</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">components_</span>
 
-            <span class="n">objective_improvement</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_objective_history</span><span class="p">[</span>
-                <span class="o">-</span><span class="mi">1</span>
+            <span class="n">objective_improvement</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_log</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span>
+                <span class="s2">&quot;objective&quot;</span>
             <span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_objective_function</span><span class="p">(</span>
                 <span class="n">residuals</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_residual_matrix</span><span class="p">()</span>
             <span class="p">)</span>
@@ -1045,6 +1083,9 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_stretch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Updates stretching matrix using constrained optimization</span>
 <span class="sd">        (equivalent to fmincon in MATLAB).&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Updating stretch factors...&quot;</span><span class="p">)</span>
 
         <span class="c1"># Flatten stretch for compatibility with the optimizer</span>
         <span class="c1"># (since SciPy expects 1D input)</span>
