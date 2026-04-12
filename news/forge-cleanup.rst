@@ -4,7 +4,7 @@
 
 **Changed:**
 
-* <news item>
+* Rename cli entrypoint to 'snmf' from 'diffpy.stretched-nmf'
 
 **Deprecated:**
 
