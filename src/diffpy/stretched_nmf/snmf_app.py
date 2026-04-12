@@ -5,7 +5,7 @@ from diffpy.stretched_nmf.version import __version__  # noqa
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="diffpy.stretched-nmf",
+        prog="snmf",
         description=(
             "A python package implementing the stretched NMF algorithm.\n\n"
             "For more information, visit: "
@@ -23,7 +23,7 @@ def main():
     args = parser.parse_args()
 
     if args.version:
-        print(f"diffpy.stretched-nmf {__version__}")
+        print(f"snmf {__version__}")
     else:
         # Default behavior when no arguments are given
         parser.print_help()

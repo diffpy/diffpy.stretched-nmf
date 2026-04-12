@@ -40,7 +40,7 @@ Verify the CLI and Python import:
 
 .. code-block:: bash
 
-   diffpy.stretched-nmf --version
+   snmf --version
    python -c "import diffpy.stretched_nmf; print(diffpy.stretched_nmf.__version__)"
 
 Basic usage
