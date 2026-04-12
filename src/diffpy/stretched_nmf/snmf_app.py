@@ -8,6 +8,9 @@ def main():
         prog="snmf",
         description=(
             "A python package implementing the stretched NMF algorithm.\n\n"
+            "Currently, this project is used by importing "
+            "`SNMFOptimizer` in Python rather than through a command-line "
+            "workflow.\n\n"
             "For more information, visit: "
             "https://github.com/diffpy/diffpy.stretched-nmf/"
         ),
