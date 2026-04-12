@@ -16,6 +16,7 @@
 
 **Fixed:**
 
+* Produce an error if test files are missing
 * Use matplotlib-base when installing with conda-forge
 
 **Security:**

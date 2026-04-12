@@ -5,9 +5,11 @@ import pytest
 
 from diffpy.stretched_nmf.snmf_class import SNMFOptimizer
 
-DATA_DIR = Path(__file__).parent / "inputs/test_snmf_optimizer"
+DATA_DIR = (
+    Path(__file__).resolve().parents[1]
+    / "docs/examples/data/XRD-MgMnO-YCl-real"
+)
 
-# Skip the test entirely if any inputs file is missing
 _required = [
     "init-components.txt",
     "source-matrix.txt",
@@ -15,18 +17,21 @@ _required = [
     "init-weights.txt",
 ]
 _missing = [f for f in _required if not (DATA_DIR / f).exists()]
-pytestmark = pytest.mark.skipif(
-    _missing, reason=f"Missing test data files: {_missing}"
-)
 
 
 @pytest.fixture(scope="module")
 def inputs():
+    if _missing:
+        pytest.fail(
+            f"Missing required test data files in {DATA_DIR}: {_missing}"
+        )
     return {
         "components": np.loadtxt(
             DATA_DIR / "init-components.txt", dtype=float
         ),
-        "source": np.loadtxt(DATA_DIR / "source-matrix.txt", dtype=float),
+        "source": np.loadtxt(
+            DATA_DIR / "source-matrix.txt", dtype=float, skiprows=4
+        ),
         "stretch": np.loadtxt(DATA_DIR / "init-stretch.txt", dtype=float),
         "weights": np.loadtxt(DATA_DIR / "init-weights.txt", dtype=float),
     }
