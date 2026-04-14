@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>otes &mdash; diffpy.stretched-nmf 0.2.1rc0 documentation</title>
+  <title>0.2.0 &mdash; diffpy.stretched-nmf 0.2.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=3f31c804"></script>
+      <script src="_static/documentation_options.js?v=3ca669d2"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -48,10 +48,11 @@
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/snmf_class.html">SNMFOptimizer</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">otes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#id1">0.1.3</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#id2">0.1.2</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#id3">0.1.0</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">0.2.0</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#otes">otes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id2">0.1.3</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id3">0.1.2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#id4">0.1.0</a></li>
 <li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
 </ul>
 
@@ -69,7 +70,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">otes</li>
+      <li class="breadcrumb-item active">0.2.0</li>
       <li class="wy-breadcrumbs-aside">
               <a href="https://github.com/diffpy/diffpy.stretched-nmf/blob/main/docs/source/release.rst" class="fa fa-github"> Edit on GitHub</a>
       </li>
@@ -80,13 +81,24 @@
            <div itemprop="articleBody">
              
   <hr class="docutils" id="index-0" />
+<p><strong>Changed:</strong></p>
+<ul class="simple">
+<li><p>Rename cli entrypoint to ‘snmf’ from ‘diffpy.stretched-nmf’</p></li>
+</ul>
+<p><strong>Fixed:</strong></p>
+<ul class="simple">
+<li><p>Produce an error if test files are missing</p></li>
+<li><p>Use matplotlib-base when installing with conda-forge</p></li>
+</ul>
+<section id="id1">
+<h1>0.2.0<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
 <p><strong>Added:</strong></p>
 <ul class="simple">
 <li><p>Coverage report in each PR</p></li>
 <li><p>Implement tests for <code class="docutils literal notranslate"><span class="pre">compute_objective_function()</span></code></p></li>
 <li><p>Add spelling check pre-commit via Codespell</p></li>
 <li><p>Added XRD example using real data</p></li>
-<li><p><a href="#id4"><span class="problematic" id="id5">SNMFOptimizer.converged_</span></a> attribute to indicate whether the optimization</p></li>
+<li><p><a href="#id5"><span class="problematic" id="id6">SNMFOptimizer.converged_</span></a> attribute to indicate whether the optimization</p></li>
 </ul>
 <p>successfully reached the convergence tolerance (True) or stopped because the
 maximum number of iterations was reached (False).
@@ -131,19 +143,20 @@ array.</p>
 <li><p>Removed the ‘SNMFOptimizer._objective_history’ list, which was made redundant</p></li>
 </ul>
 <p>by the comprehensive ‘SNMFOptimizer.objective_log’ tracking system.</p>
+</section>
 <section id="otes">
 <h1>otes<a class="headerlink" href="#otes" title="Link to this heading"></a></h1>
 </section>
-<section id="id1">
-<h1>0.1.3<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
+<section id="id2">
+<h1>0.1.3<a class="headerlink" href="#id2" title="Link to this heading"></a></h1>
 <p><strong>Fixed:</strong></p>
 <ul class="simple">
 <li><p>Updated README instructions for pip and conda-forge install</p></li>
 <li><p>Updated README instructions to check for successful installation</p></li>
 </ul>
 </section>
-<section id="id2">
-<h1>0.1.2<a class="headerlink" href="#id2" title="Link to this heading"></a></h1>
+<section id="id3">
+<h1>0.1.2<a class="headerlink" href="#id3" title="Link to this heading"></a></h1>
 <p><strong>Added:</strong></p>
 <ul class="simple">
 <li><p>Use GitHub Actions to build, release, upload to PyPI</p></li>
@@ -162,8 +175,8 @@ array.</p>
 <li><p>Add pip dependencies under pip.txt and conda dependencies under conda.txt</p></li>
 </ul>
 </section>
-<section id="id3">
-<h1>0.1.0<a class="headerlink" href="#id3" title="Link to this heading"></a></h1>
+<section id="id4">
+<h1>0.1.0<a class="headerlink" href="#id4" title="Link to this heading"></a></h1>
 <p><strong>Added:</strong></p>
 <ul class="simple">
 <li><p>Initial release of diffpy.snmf</p></li>
