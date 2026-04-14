@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting started &mdash; diffpy.stretched-nmf 0.2.0 documentation</title>
+  <title>Getting started &mdash; diffpy.stretched-nmf 0.2.1rc0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
@@ -14,7 +14,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=95e61db4"></script>
+      <script src="_static/documentation_options.js?v=3f31c804"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -99,6 +99,9 @@ conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </
 conda<span class="w"> </span>activate<span class="w"> </span>diffpy.stretched-nmf_env
 </pre></div>
 </div>
+<p>For interactive plotting with <code class="docutils literal notranslate"><span class="pre">show_plots=True</span></code>, use a GUI-capable desktop
+environment. Conda installs use <code class="docutils literal notranslate"><span class="pre">matplotlib-base</span></code>, which is sufficient for
+plotting but still depends on an available interactive Matplotlib backend.</p>
 <p>Alternatively, install from PyPI with pip:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>diffpy.stretched-nmf
 </pre></div>
@@ -111,7 +114,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>diffpy.stretched-nm
 <section id="quick-check">
 <h2>Quick check<a class="headerlink" href="#quick-check" title="Link to this heading"></a></h2>
 <p>Verify the CLI and Python import:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>diffpy.stretched-nmf<span class="w"> </span>--version
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>snmf<span class="w"> </span>--version
 python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import diffpy.stretched_nmf; print(diffpy.stretched_nmf.__version__)&quot;</span>
 </pre></div>
 </div>
