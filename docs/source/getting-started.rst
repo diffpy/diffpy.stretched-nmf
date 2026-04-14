@@ -17,6 +17,10 @@ The preferred method is conda:
    conda create -n diffpy.stretched-nmf_env diffpy.stretched-nmf
    conda activate diffpy.stretched-nmf_env
 
+For interactive plotting with ``show_plots=True``, use a GUI-capable desktop
+environment. Conda installs use ``matplotlib-base``, which is sufficient for
+plotting but still depends on an available interactive Matplotlib backend.
+
 Alternatively, install from PyPI with pip:
 
 .. code-block:: bash
@@ -36,7 +40,7 @@ Verify the CLI and Python import:
 
 .. code-block:: bash
 
-   diffpy.stretched-nmf --version
+   snmf --version
    python -c "import diffpy.stretched_nmf; print(diffpy.stretched_nmf.__version__)"
 
 Basic usage
