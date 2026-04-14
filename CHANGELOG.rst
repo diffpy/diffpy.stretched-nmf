@@ -1,5 +1,18 @@
 =============
 Release n
+0.2.1
+=====
+
+**Changed:**
+
+* Rename cli entrypoint to 'snmf' from 'diffpy.stretched-nmf'
+
+**Fixed:**
+
+* Produce an error if test files are missing
+* Use matplotlib-base when installing with conda-forge
+
+
 0.2.0
 =====
 
