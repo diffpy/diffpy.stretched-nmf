@@ -961,10 +961,7 @@ class SNMFOptimizer:
             )
             self.weights_[:, signal] = new_weight
 
-    def _regularize_function(self, stretch=None):
-        if stretch is None:
-            stretch = self.stretch_
-
+    def _stretch_residual_and_derivatives(self, stretch):
         stretched_components, d_stretch_comps, dd_stretch_comps = (
             self._compute_stretched_components(stretch=stretch)
         )
@@ -977,6 +974,15 @@ class SNMFOptimizer:
                 (self.signal_length_, self.n_signals_), order="F"
             )
             - self._source_matrix
+        )
+        return residuals, d_stretch_comps, dd_stretch_comps
+
+    def _regularize_function(self, stretch=None):
+        if stretch is None:
+            stretch = self.stretch_
+
+        residuals, d_stretch_comps, _ = self._stretch_residual_and_derivatives(
+            stretch
         )
 
         fun = self._get_objective_function(residuals, stretch)
@@ -992,9 +998,42 @@ class SNMFOptimizer:
             @ (self._spline_smooth_operator.T @ self._spline_smooth_operator)
         )
 
-        # Hessian would go here
-
         return fun, gra
+
+    def _regularize_function_hessian(self, stretch):
+        residuals, d_stretch_comps, dd_stretch_comps = (
+            self._stretch_residual_and_derivatives(stretch)
+        )
+        n_variables = self.n_components_ * self.n_signals_
+        hessian = np.zeros((n_variables, n_variables), dtype=float)
+
+        for signal in range(self.n_signals_):
+            variable_indices = (
+                np.arange(self.n_components_) * self.n_signals_ + signal
+            )
+            d_signal = d_stretch_comps[:, variable_indices]
+            dd_signal = dd_stretch_comps[:, variable_indices]
+            hessian[np.ix_(variable_indices, variable_indices)] += (
+                d_signal.T @ d_signal
+            )
+            hessian[variable_indices, variable_indices] += np.sum(
+                dd_signal * residuals[:, signal, None],
+                axis=0,
+            )
+
+        smooth_hessian = (
+            self._spline_smooth_operator.T @ self._spline_smooth_operator
+        ).toarray()
+        for comp in range(self.n_components_):
+            component_slice = slice(
+                comp * self.n_signals_,
+                (comp + 1) * self.n_signals_,
+            )
+            hessian[component_slice, component_slice] += (
+                self.rho * smooth_hessian
+            )
+
+        return 0.5 * (hessian + hessian.T)
 
     def _update_stretch(self):
         """Updates stretching matrix using constrained optimization
@@ -1016,6 +1055,30 @@ class SNMFOptimizer:
             gra = gra.flatten()
             return fun, gra
 
+        def hessian(stretch_vec):
+            stretch_matrix = stretch_vec.reshape(self.stretch_.shape)
+            return self._regularize_function_hessian(stretch_matrix)
+
+        unconstrained_result = minimize(
+            fun=lambda stretch_vec: objective(stretch_vec)[0],
+            x0=stretch_flat_initial,
+            method="trust-exact",
+            jac=lambda stretch_vec: objective(stretch_vec)[1],
+            hess=hessian,
+            options={"maxiter": 300},
+        )
+        unconstrained_stretch = unconstrained_result.x.reshape(
+            self.stretch_.shape
+        )
+        if np.all(unconstrained_stretch >= 0.1):
+            current_objective = self._regularize_function(self.stretch_)[0]
+            candidate_objective = self._regularize_function(
+                unconstrained_stretch
+            )[0]
+            if candidate_objective <= current_objective:
+                self.stretch_ = unconstrained_stretch
+                return
+
         # Optimization constraints: lower bound 0.1, no upper bound
         bounds = [
             (0.1, None)
@@ -1027,6 +1090,7 @@ class SNMFOptimizer:
             x0=stretch_flat_initial,
             method="trust-constr",  # Substitute for 'trust-region-reflective'
             jac=lambda stretch_vec: objective(stretch_vec)[1],  # Gradient
+            hess=hessian,
             bounds=bounds,
         )
 
