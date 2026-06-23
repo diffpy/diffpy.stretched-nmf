@@ -1,62 +1,42 @@
-from pathlib import Path
-
 import numpy as np
 import pytest
 
 from diffpy.stretched_nmf.snmf_class import SNMFOptimizer
 
-DATA_DIR = (
-    Path(__file__).resolve().parents[1]
-    / "docs/examples/data/XRD-MgMnO-YCl-real"
-)
 
-_required = [
-    "init-components.txt",
-    "source-matrix.txt",
-    "init-stretch.txt",
-    "init-weights.txt",
-]
-_missing = [f for f in _required if not (DATA_DIR / f).exists()]
+def test_fit_recovers_rank_one_factors():
+    expected_components = np.array(
+        [
+            [0.20],
+            [0.75],
+            [1.20],
+            [0.80],
+            [0.30],
+        ]
+    )
+    expected_weights = np.array(
+        [
+            [0.20, 0.60, 1.00, 0.40],
+        ]
+    )
+    source = expected_components @ expected_weights
 
-
-@pytest.fixture(scope="module")
-def inputs():
-    if _missing:
-        pytest.fail(
-            f"Missing required test data files in {DATA_DIR}: {_missing}"
-        )
-    return {
-        "components": np.loadtxt(
-            DATA_DIR / "init-components.txt", dtype=float
-        ),
-        "source": np.loadtxt(
-            DATA_DIR / "source-matrix.txt", dtype=float, skiprows=4
-        ),
-        "stretch": np.loadtxt(DATA_DIR / "init-stretch.txt", dtype=float),
-        "weights": np.loadtxt(DATA_DIR / "init-weights.txt", dtype=float),
-    }
-
-
-@pytest.mark.slow
-def test_final_objective_below_threshold(inputs):
     model = SNMFOptimizer(
+        n_components=1,
         show_plots=False,
         random_state=1,
-        min_iter=5,
-        max_iter=5,
-        rho=1e12,
-        eta=610,
+        min_iter=0,
+        max_iter=2,
+        rho=0.0,
+        eta=0.0,
     )
-    model.fit(
-        source_matrix=inputs["source"],
-        init_weights=inputs["weights"],
-        init_components=inputs["components"],
-        init_stretch=inputs["stretch"],
-    )
+    model.fit(source_matrix=source)
 
-    # Basic sanity check and the actual assertion
     assert np.isfinite(model.objective_function_)
-    assert model.objective_function_ < 5e6
+    assert np.allclose(
+        model.components_, expected_components, rtol=0.2, atol=0.1
+    )
+    assert np.allclose(model.weights_, expected_weights, rtol=0.2, atol=0.1)
 
 
 @pytest.mark.parametrize(
