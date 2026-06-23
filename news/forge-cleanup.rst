@@ -18,6 +18,7 @@
 
 * Produce an error if test files are missing
 * Use matplotlib-base when installing with conda-forge
+* Update to docformatter 1.7.8
 
 **Security:**
 
