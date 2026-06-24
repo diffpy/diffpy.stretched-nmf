@@ -117,7 +117,6 @@ class SNMFOptimizer:
         show_plots : bool
             Enables plotting at each step of the decomposition. Optional.
         """
-
         if n_components is not None and n_components < 1:
             raise ValueError("n_components must be a positive integer.")
 
@@ -589,7 +588,6 @@ class SNMFOptimizer:
         -------
         residuals : (signal_len, n_signals) array
         """
-
         if components is None:
             components = self.components_
         if weights is None:
@@ -681,7 +679,6 @@ class SNMFOptimizer:
         dd_stretched_components : array, shape (signal_len, n_comps * n_sigs)
             Second derivatives with respect to stretch.
         """
-
         # --- Defaults ---
         if components is None:
             components = self.components_
@@ -758,7 +755,6 @@ class SNMFOptimizer:
         """Computes the transformation matrix `stretch_transformed` for
         residuals, using scaling matrix `stretch` and weight
         coefficients `weights`."""
-
         if stretch is None:
             stretch = self.stretch_
         if weights is None:
@@ -921,7 +917,6 @@ class SNMFOptimizer:
     def _update_components(self):
         """Updates `components` using gradient-based optimization with
         adaptive step size."""
-
         # Compute stretched components using the interpolation function
         stretched_components, _, _ = (
             self._compute_stretched_components()
@@ -1010,7 +1005,6 @@ class SNMFOptimizer:
         """Updates weights by building the stretched component matrix
         `stretched_comps` with np.interp and solving a quadratic program
         for each signal."""
-
         sample_indices = np.arange(self.signal_length_)
         for signal in range(self.n_signals_):
             # Stretch factors for this signal across components:
@@ -1075,7 +1069,6 @@ class SNMFOptimizer:
     def _update_stretch(self):
         """Updates stretching matrix using constrained optimization
         (equivalent to fmincon in MATLAB)."""
-
         if self.verbose:
             print("Updating stretch factors...")
 
@@ -1223,7 +1216,6 @@ def _reconstruct_matrix(components, weights, stretch):
     -------
     reconstructed_matrix : (signal_len, n_signals) array
     """
-
     signal_len = components.shape[0]
     n_components = components.shape[1]
     n_signals = weights.shape[1]
