@@ -1155,7 +1155,6 @@ class SNMFOptimizer:
         stretch gradient, take linearized proximal steps, then project back
         onto the feasible stretch range.
         """
-
         if getattr(self, "_outer_iter", 0) < self.stretch_slow_iter:
             self._update_stretch_trust_constr()
         else:
