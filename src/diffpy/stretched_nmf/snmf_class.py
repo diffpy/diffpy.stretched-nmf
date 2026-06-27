@@ -446,7 +446,6 @@ class SNMFOptimizer:
                 )
                 previous_timestamp = timestamp
 
-    
     def _normalize_results(self):
         if self.verbose:
             print("\nNormalizing results after convergence...")
