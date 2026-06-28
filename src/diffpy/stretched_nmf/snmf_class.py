@@ -995,6 +995,23 @@ class SNMFOptimizer:
         return fun, gra
 
     def _regularize_function_hessian(self, stretch):
+        """Calculate the Hessian for the stretch optimization objective.
+
+        The Hessian combines the Gauss-Newton curvature from the stretched
+        component derivatives, the residual-weighted second derivatives of
+        those stretched components, and the quadratic smoothing penalty on
+        neighboring stretch factors.
+
+        Parameters
+        ----------
+        stretch : ndarray of shape (n_components, n_signals)
+            Stretching factors at which to evaluate the objective curvature.
+
+        Returns
+        -------
+        ndarray of shape (n_components * n_signals, n_components * n_signals)
+            Symmetric Hessian matrix for the flattened stretch variables.
+        """
         residuals, d_stretch_comps, dd_stretch_comps = (
             self._stretch_residual_and_derivatives(stretch)
         )
