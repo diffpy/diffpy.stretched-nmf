@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from scipy.sparse import csr_matrix
 
 from diffpy.stretched_nmf.snmf_class import SNMFOptimizer
 
@@ -110,3 +111,47 @@ def test_compute_objective_function(inputs, expected):
         spline_smooth_operator=operator,
     )
     assert np.isclose(result, expected)
+
+
+def test_regularize_function_hessian_has_expected_structure():
+    model = SNMFOptimizer(n_components=2, rho=0.5)
+    model.n_components_ = 2
+    model.n_signals_ = 3
+    model._spline_smooth_operator = csr_matrix(
+        [[1.0, -1.0, 0.0], [0.0, 1.0, -1.0]]
+    )
+
+    residuals = np.array([[2.0, -1.0, 4.0], [1.0, 3.0, -2.0]])
+    d_stretch_comps = np.array(
+        [
+            [1.0, 0.0, 1.0, 2.0, 0.0, 1.0],
+            [0.0, 1.0, 1.0, 0.0, 3.0, -1.0],
+        ]
+    )
+    dd_stretch_comps = np.array(
+        [
+            [0.5, 1.0, 0.0, 1.0, 0.0, -0.5],
+            [1.0, 0.0, 0.25, 0.0, 1.0, 0.5],
+        ]
+    )
+    model._stretch_residual_and_derivatives = lambda stretch: (
+        residuals,
+        d_stretch_comps,
+        dd_stretch_comps,
+    )
+
+    hessian = model._regularize_function_hessian(np.ones((2, 3)))
+
+    expected = np.array(
+        [
+            [3.5, -0.5, 0.0, 2.0, 0.0, 0.0],
+            [-0.5, 1.0, -0.5, 0.0, 3.0, 0.0],
+            [0.0, -0.5, 2.0, 0.0, 0.0, 0.0],
+            [2.0, 0.0, 0.0, 6.5, -0.5, 0.0],
+            [0.0, 3.0, 0.0, -0.5, 13.0, -0.5],
+            [0.0, 0.0, 0.0, 0.0, -0.5, -0.5],
+        ]
+    )
+    assert hessian.shape == (6, 6)
+    assert np.allclose(hessian, hessian.T)
+    assert np.allclose(hessian, expected)
