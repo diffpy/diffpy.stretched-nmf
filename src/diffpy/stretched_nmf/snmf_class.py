@@ -509,7 +509,7 @@ class SNMFOptimizer:
                     print(
                         f"\n--- Iteration {outiter} after normalization---"
                         f"\nTotal Objective   : {self.objective_function_:.5e}"
-                        "\nConvergence Check : Δ "
+                        "\nConvergence Check : Delta "
                         f"({self.objective_difference_:.2e})"
                         f" < Threshold ({convergence_threshold:.2e})\n"
                     )
@@ -1058,10 +1058,6 @@ class SNMFOptimizer:
                 )
             )
 
-            # Keep the current state intact until a finite, improving update
-            # is found.  The prior code assigned rejected candidates directly
-            # to self.components_, so an overflowed backtracking loop could
-            # silently replace a valid component peak with zeros.
             if (
                 np.isfinite(objective_improvement)
                 and objective_improvement > 0
@@ -1144,6 +1140,23 @@ class SNMFOptimizer:
         return fun, gra
 
     def _regularize_function_hessian(self, stretch):
+        """Calculate the Hessian for the stretch optimization objective.
+
+        The Hessian combines the Gauss-Newton curvature from the stretched
+        component derivatives, the residual-weighted second derivatives of
+        those stretched components, and the quadratic smoothing penalty on
+        neighboring stretch factors.
+
+        Parameters
+        ----------
+        stretch : ndarray of shape (n_components, n_signals)
+            Stretching factors at which to evaluate the objective curvature.
+
+        Returns
+        -------
+        ndarray of shape (n_components * n_signals, n_components * n_signals)
+            Symmetric Hessian matrix for the flattened stretch variables.
+        """
         residuals, d_stretch_comps, dd_stretch_comps = (
             self._stretch_residual_and_derivatives(stretch)
         )
