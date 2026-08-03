@@ -467,7 +467,6 @@ class SNMFOptimizer:
         self._prev_grad_components = np.zeros_like(
             self.components_
         )  # Previous gradient of X (zeros for now)
-
         self._fill_tail_zero = True
         try:
             self.residuals_ = self._get_residual_matrix()
@@ -476,7 +475,6 @@ class SNMFOptimizer:
             self._objective_history = [self.objective_function_]
             self._outer_iter = 0
             self._inner_iter = 0
-
             normalization_max_iter = max(self.max_iter, 100)
             for outiter in range(normalization_max_iter):
                 self._outer_iter = outiter
@@ -511,7 +509,7 @@ class SNMFOptimizer:
                     print(
                         f"\n--- Iteration {outiter} after normalization---"
                         f"\nTotal Objective   : {self.objective_function_:.5e}"
-                        "\nConvergence Check : Delta "
+                        "\nConvergence Check : Δ "
                         f"({self.objective_difference_:.2e})"
                         f" < Threshold ({convergence_threshold:.2e})\n"
                     )
@@ -686,7 +684,9 @@ class SNMFOptimizer:
             order="F",
         )
 
-    def _get_objective_function(self, residuals=None, stretch=None):
+    def _get_objective_function(
+        self, residuals=None, stretch=None, components=None
+    ):
         """Return the objective value, passing stored attributes or
         overrides to _compute_objective_function().
 
@@ -696,6 +696,8 @@ class SNMFOptimizer:
             Residual matrix to use instead of self.residuals_.
         stretch : ndarray, optional
             Stretch matrix to use instead of self.stretch_.
+        components : ndarray, optional
+            Component matrix to use instead of self.components_.
 
         Returns
         -------
@@ -703,7 +705,7 @@ class SNMFOptimizer:
             Current objective function value.
         """
         return SNMFOptimizer._compute_objective_function(
-            components=self.components_,
+            components=self.components_ if components is None else components,
             residuals=self.residuals_ if residuals is None else residuals,
             stretch=self.stretch_ if stretch is None else stretch,
             rho=self.rho,
@@ -1032,33 +1034,44 @@ class SNMFOptimizer:
                 self._prev_components - self._grad_components / step_size
             )
             # Solve x^3 + p*x + q = 0 for the largest real root
-            self.components_ = np.square(
+            candidate_components = np.square(
                 _cubic_largest_real_root(
                     -components_step, self.eta / (2 * step_size)
                 )
             )
             # Mask values that should be set to zero
             mask = (
-                self.components_**2 * step_size / 2
-                - step_size * self.components_ * components_step
-                + self.eta * np.sqrt(self.components_)
+                candidate_components**2 * step_size / 2
+                - step_size * candidate_components * components_step
+                + self.eta * np.sqrt(candidate_components)
                 < 0
             )
-            self.components_ = mask * self.components_
+            candidate_components = mask * candidate_components
 
             objective_improvement = (
                 self.objective_function_
                 - self._get_objective_function(
-                    residuals=self._get_residual_matrix()
+                    components=candidate_components,
+                    residuals=self._get_residual_matrix(
+                        components=candidate_components
+                    ),
                 )
             )
 
-            # Check if objective function improves
-            if objective_improvement > 0:
+            # Keep the current state intact until a finite, improving update
+            # is found.  The prior code assigned rejected candidates directly
+            # to self.components_, so an overflowed backtracking loop could
+            # silently replace a valid component peak with zeros.
+            if (
+                np.isfinite(objective_improvement)
+                and objective_improvement > 0
+            ):
+                self.components_ = candidate_components
                 break
             # If not, increase step_size (step size)
             step_size *= 2
             if np.isinf(step_size):
+                self.components_ = self._prev_components
                 break
 
     def _update_weights(self):
@@ -1131,23 +1144,6 @@ class SNMFOptimizer:
         return fun, gra
 
     def _regularize_function_hessian(self, stretch):
-        """Calculate the Hessian for the stretch optimization objective.
-
-        The Hessian combines the Gauss-Newton curvature from the stretched
-        component derivatives, the residual-weighted second derivatives of
-        those stretched components, and the quadratic smoothing penalty on
-        neighboring stretch factors.
-
-        Parameters
-        ----------
-        stretch : ndarray of shape (n_components, n_signals)
-            Stretching factors at which to evaluate the objective curvature.
-
-        Returns
-        -------
-        ndarray of shape (n_components * n_signals, n_components * n_signals)
-            Symmetric Hessian matrix for the flattened stretch variables.
-        """
         residuals, d_stretch_comps, dd_stretch_comps = (
             self._stretch_residual_and_derivatives(stretch)
         )
@@ -1383,10 +1379,12 @@ class SNMFOptimizer:
 def _cubic_largest_real_root(p, q):
     """Solves x^3 + p*x + q = 0 element-wise for matrices, returning the
     largest real root."""
-    # Handle special case where q == 0
-    y = np.where(
-        q == 0, np.maximum(0, -p) ** 0.5, np.zeros_like(p)
-    )  # q=0 case
+    # For q == 0, the non-negative solution is available directly.  Keep
+    # this branch separate: the general complex-root calculation below is
+    # numerically unstable at this degenerate cubic and previously overwrote
+    # the exact result.
+    q_is_zero = q == 0
+    zero_q_root = np.maximum(0, -p) ** 0.5
 
     # Compute discriminant
     delta = (q / 2) ** 2 + (p / 3) ** 3
@@ -1409,9 +1407,9 @@ def _cubic_largest_real_root(p, q):
 
     # Take the largest real root element-wise when delta < 0
     r_roots = np.stack([np.real(y1), np.real(y2), np.real(y3)], axis=0)
-    y = np.where(delta < 0, np.max(r_roots, axis=0), 0.0)
+    general_root = np.where(delta < 0, np.max(r_roots, axis=0), 0.0)
 
-    return y
+    return np.where(q_is_zero, zero_q_root, general_root)
 
 
 def _reconstruct_matrix(components, weights, stretch):
