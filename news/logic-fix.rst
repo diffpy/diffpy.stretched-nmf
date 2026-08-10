@@ -1,6 +1,6 @@
 **Added:**
 
-* <news item>
+* Add a regression test for the cubic root solver
 
 **Changed:**
 
