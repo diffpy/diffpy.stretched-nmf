@@ -2,7 +2,10 @@ import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
 
-from diffpy.stretched_nmf.snmf_class import SNMFOptimizer
+from diffpy.stretched_nmf.snmf_class import (
+    SNMFOptimizer,
+    _cubic_largest_real_root,
+)
 
 
 def test_fit_recovers_rank_one_factors():
@@ -38,6 +41,40 @@ def test_fit_recovers_rank_one_factors():
         model.components_, expected_components, rtol=0.2, atol=0.1
     )
     assert np.allclose(model.weights_, expected_weights, rtol=0.2, atol=0.1)
+
+
+def test_cubic_largest_real_root_preserves_tiny_zero_q_root():
+    root = _cubic_largest_real_root(np.array([[-1e-300]]), np.zeros((1, 1)))
+
+    np.testing.assert_allclose(root, [[1e-150]], rtol=1e-12, atol=0)
+
+
+def test_failed_component_update_restores_previous_components():
+    model = SNMFOptimizer(n_components=1, eta=0.0)
+    model.signal_length_ = model.n_signals_ = model.n_components_ = 1
+    model.components_ = np.array([[1.0]])
+    max_float = np.finfo(float).max
+    model.weights_ = np.array([[np.sqrt(max_float)]])
+    model.stretch_ = np.ones((1, 1))
+    model._source_matrix = np.zeros((1, 1))
+    model._fill_tail_zero = True
+    model._outer_iter = model._inner_iter = 0
+    model.objective_function_ = 0.0
+    model._compute_stretched_components = lambda: (
+        np.zeros((1, 1)),
+        None,
+        None,
+    )
+    model._compute_component_gradient_zero_tail = lambda residuals: np.array(
+        [[np.finfo(float).max]]
+    )
+    model._get_residual_matrix = lambda **kwargs: np.zeros((1, 1))
+    model._get_objective_function = lambda **kwargs: 1.0
+
+    with np.errstate(over="ignore"):
+        model._update_components()
+
+    np.testing.assert_array_equal(model.components_, [[1.0]])
 
 
 @pytest.mark.parametrize(
