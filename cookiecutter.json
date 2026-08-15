@@ -13,8 +13,8 @@
   "package_dir_name": "diffpy.stretched_nmf",
   "project_short_description": "A python package implementing the stretched NMF algorithm.",
   "project_keywords": "diffraction, PDF, x-ray, mapping",
-  "minimum_supported_python_version": "3.11",
-  "maximum_supported_python_version": "3.13",
+  "minimum_supported_python_version": "3.12",
+  "maximum_supported_python_version": "3.14",
   "project_needs_c_code_compiled": "No",
   "project_has_gui_tests": "No"
 }
