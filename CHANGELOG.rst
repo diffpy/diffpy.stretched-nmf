@@ -1,5 +1,35 @@
 =============
 Release n
+0.3.0
+=====
+
+**Added:**
+
+* Add support for Python 3.14
+* Fill component tail with zeros during normalization
+* Add test for recovery from failed component update
+* Add a regression test for the cubic root solver
+* Optimize stretch using a Hessian matrix
+* Use faster iterations when possible
+* Allow storing of objective log
+
+**Changed:**
+
+* Rename cli entrypoint to 'snmf' from 'diffpy.stretched-nmf'
+
+**Fixed:**
+
+* Maintain valid state through the algorithm
+* Remove warning by explicitly interpreting cubic root as complex
+* Produce an error if test files are missing
+* Use matplotlib-base when installing with conda-forge
+* Update to docformatter 1.7.8
+
+**Removed:**
+
+* End support for Python 3.11
+
+
 0.2.1
 =====
 
